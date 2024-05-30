@@ -10,7 +10,8 @@ use tui::{
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Paragraph, List, ListItem, ListState},
     Terminal,
-    Frame
+    Frame,
+    text::{Span, Spans}
 };
 
 use tokio::runtime::Runtime;
@@ -60,8 +61,8 @@ struct AppState {
     method: HttpMethod,
     input: String,
     message: String,
-   /* input_x: u16,
-    input_y: u16, */
+    input_x: u16,
+    input_y: u16, 
     message_x: u16,
     message_y: u16,
     active_block: ActiveBlock,
@@ -77,8 +78,8 @@ impl AppState {
             method: HttpMethod::GET,
             input: String::new(),
             message: String::new(),
-          /*   input_x: 0,
-            input_y: 0, */
+             input_x: 0,
+            input_y: 0, 
             message_x: 0,
             message_y: 0,
             active_block: ActiveBlock::Input,
@@ -175,9 +176,15 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> 
                 } else {
                     Color::White
                 }));
-            let paragraph = Paragraph::new(app_state.input.clone())
+                let input_text = app_state.input
+                .lines()
+                .map(|line| Spans::from(Span::raw(line)))
+                .collect::<Vec<Spans>>();
+
+                let paragraph = Paragraph::new(input_text)
                 .block(input_block)
-                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)).scroll(( /*app_state.input_y, app_state.input_x*/ 0,0));
+                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                .wrap(tui::widgets::Wrap { trim: false }).scroll((app_state.input_y, app_state.input_x));;
             f.render_widget(paragraph, top_chunks[1]);
 
             // Message block
@@ -229,8 +236,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> 
                         app_state.active_block = ActiveBlock::Method;
                     } else if let ActiveBlock::Input = app_state.active_block {
                         let url = app_state.input.clone();
-                      /*  app_state.input_x = 0;
-                        app_state.input_y = 0; */
+                       app_state.input_x = 0;
+                        app_state.input_y = 0; 
                         if app_state.method ==  HttpMethod::GET{
 
                         }
@@ -267,9 +274,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> 
                         }    else {
                     match app_state.active_block {
                         ActiveBlock::Input => {
-                           /* if app_state.input_y > 0 {
+                            if app_state.input_y > 0 {
                                 app_state.input_y -= 1;
-                            } */
+                            } 
                         }
                         ActiveBlock::Message => {
                             if app_state.message_y > 0 {
@@ -297,7 +304,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> 
                         app_state.list_state.select(Some(i));
                     } else {
                         match app_state.active_block {
-                           // ActiveBlock::Input => app_state.input_y += 1,
+                           ActiveBlock::Input => app_state.input_y += 1,
                             ActiveBlock::Message => app_state.message_y += 1,
                             _ => {}
                         }
@@ -313,9 +320,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> 
                 KeyCode::Left => {
                     match app_state.active_block {
                         ActiveBlock::Input => {
-                           /*  if app_state.input_x > 0 {
+                             if app_state.input_x > 0 {
                                 app_state.input_x -= 1;
-                            } */
+                            } 
                         }
                         ActiveBlock::Message => {
                             if app_state.message_x > 0 {
@@ -328,7 +335,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> 
                 }
                 KeyCode::Right => {
                     match app_state.active_block {
-                       /*  ActiveBlock::Input => app_state.input_x += 1, */
+                         ActiveBlock::Input => app_state.input_x += 1, 
                         ActiveBlock::Message => app_state.message_x += 1,
                         _ => {}
                     }
