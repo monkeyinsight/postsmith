@@ -1,8 +1,8 @@
 mod components;
 mod request;
 mod ui;
-
 use std::io;
+
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event},
     execute,

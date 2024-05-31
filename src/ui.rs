@@ -1,4 +1,4 @@
-
+use crossterm::event::KeyCode;
 use tui::backend::Backend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
@@ -24,49 +24,59 @@ pub enum ActiveBlock {
     Message,
 }
 
-
-    impl AppState {
-        pub fn new() -> Self {
-            Self {
-                method_component: SelectorComponent::new(),
-                input_component: InputComponent::new(),
-                message_component: OutputComponent::new(),
-                active_block: ActiveBlock::Method,
-                runtime: tokio::runtime::Runtime::new().unwrap(),
-            }
+impl AppState {
+    pub fn new() -> Self {
+        Self {
+            method_component: SelectorComponent::new(),
+            input_component: InputComponent::new(),
+            message_component: OutputComponent::new(),
+            active_block: ActiveBlock::Method,
+            runtime: tokio::runtime::Runtime::new().unwrap(),
         }
-    
-        pub fn handle_key_event(&mut self, key: crossterm::event::KeyCode) -> bool {
-            match self.active_block {
-                ActiveBlock::Method => self.method_component.keybinds(key),
-                ActiveBlock::Input => self.input_component.keybinds(key),
-                ActiveBlock::Message => self.message_component.keybinds(key),
+    }
+
+    pub fn handle_key_event(&mut self, key: KeyCode) -> bool {
+        match self.active_block {
+            ActiveBlock::Method => self.method_component.keybinds(key),
+            ActiveBlock::Input => self.input_component.keybinds(key),
+            ActiveBlock::Message => self.message_component.keybinds(key),
+        }
+
+        if key == KeyCode::BackTab{
+         
+                
+                self.active_block = match self.active_block {
+                    ActiveBlock::Method => ActiveBlock::Message,
+                    ActiveBlock::Input => ActiveBlock::Method,
+                    ActiveBlock::Message => ActiveBlock::Input,
+            
             }
-    
-            if let crossterm::event::KeyCode::Tab = key {
+            } else if key == KeyCode::Tab  {
+                // Tab: move forward
                 self.active_block = match self.active_block {
                     ActiveBlock::Method => ActiveBlock::Input,
                     ActiveBlock::Input => ActiveBlock::Message,
                     ActiveBlock::Message => ActiveBlock::Method,
                 };
-            } else if let crossterm::event::KeyCode::Enter = key {
-                if self.active_block == ActiveBlock::Input {
-                    let url = self.input_component.input.clone();
-                    let response = self.runtime.block_on(crate::request::send_get_request(&url));
-                    match response {
-                        Ok(body) => self.message_component.message = body,
-                        Err(err) => self.message_component.message = format!("Error: {}", err),
-                    }
-                }
-            } else if let crossterm::event::KeyCode::Char('q') = key {
-                if self.active_block != ActiveBlock::Input {
-                    return true; 
+            
+        } else if key == KeyCode::Enter {
+            if self.active_block == ActiveBlock::Input {
+                let url = self.input_component.input.clone();
+                let response = self.runtime.block_on(crate::request::send_get_request(&url));
+                match response {
+                    Ok(body) => self.message_component.message = body,
+                    Err(err) => self.message_component.message = format!("Error: {}", err),
                 }
             }
-    
-            false 
+        } else if key == KeyCode::Char('q') {
+            if self.active_block != ActiveBlock::Input {
+                return true;
+            }
         }
+
+        false
     }
+}
 
 pub fn draw_ui<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> std::io::Result<()> {
     terminal.draw(|f| {
@@ -99,5 +109,3 @@ pub fn draw_ui<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState)
     })?;
     Ok(())
 }
-
-

@@ -42,20 +42,20 @@ impl Component for OutputComponent {
 
     fn keybinds(&mut self, key: KeyCode) {
         match key {
-            KeyCode::Up => {
+            KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('K') => {
                 if self.scroll_y > 0 {
                     self.scroll_y -= 1;
                 }
             }
-            KeyCode::Down => {
+            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J')=> {
                 self.scroll_y += 1;
             }
-            KeyCode::Left => {
+            KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('H') => {
                 if self.scroll_x > 0 {
                     self.scroll_x -= 1;
                 }
             }
-            KeyCode::Right => {
+            KeyCode::Right | KeyCode::Char('l') | KeyCode::Char('L') => {
                 self.scroll_x += 1;
             }
             _ => {}
