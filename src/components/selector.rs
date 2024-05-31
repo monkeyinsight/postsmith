@@ -112,7 +112,7 @@ impl Component for SelectorComponent {
                     self.show_selection = true;
                 }
             }
-            KeyCode::Up => {
+            KeyCode::Up | KeyCode::Char('j') | KeyCode::Char('J')=> {
                 if self.show_selection {
                     let i = match self.list_state.borrow().selected() {
                         Some(i) => {
@@ -127,7 +127,7 @@ impl Component for SelectorComponent {
                     self.list_state.borrow_mut().select(Some(i));
                 }
             }
-            KeyCode::Down => {
+            KeyCode::Down | KeyCode::Char('k') | KeyCode::Char('K') => {
                 if self.show_selection {
                     let i = match self.list_state.borrow().selected() {
                         Some(i) => {
