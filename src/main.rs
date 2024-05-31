@@ -45,7 +45,16 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> 
         draw_ui(terminal, app_state)?;
 
         if let Event::Key(key) = event::read()? {
-            app_state.handle_key_event(key.code);
+
+            
+        
+            if app_state.handle_key_event(key.code) {
+                break;
+            }
         }
     }
+
+    Ok(())
 }
+
+
