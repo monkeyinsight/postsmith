@@ -62,7 +62,7 @@ impl AppState {
         } else if key == KeyCode::Enter {
             if self.active_block == ActiveBlock::Input {
                 let url = self.input_component.input.clone();
-                let response = self.runtime.block_on(crate::request::send_get_request(&url));
+                let response = self.runtime.block_on(crate::request::send_get_request(&url.value()));
                 match response {
                     Ok(body) => self.message_component.message = body,
                     Err(err) => self.message_component.message = format!("Error: {}", err),
