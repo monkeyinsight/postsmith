@@ -1,6 +1,7 @@
 use crossterm::event::KeyCode;
 use ratatui::{backend::Backend, layout::{Constraint, Direction, Layout, Rect}, Terminal, Frame};
 use crate::components::{InputComponent, OutputComponent, SelectorComponent};
+use crate::session::Session;
 
 pub trait Component {
     fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool);
@@ -13,6 +14,7 @@ pub struct AppState {
     pub message_component: OutputComponent,
     pub active_block: ActiveBlock,
     pub runtime: tokio::runtime::Runtime,
+    pub session: Session,
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -30,6 +32,7 @@ impl AppState {
             message_component: OutputComponent::new(),
             active_block: ActiveBlock::Method,
             runtime: tokio::runtime::Runtime::new().unwrap(),
+            session: Session::new(),
         }
     }
 
@@ -56,6 +59,8 @@ impl AppState {
             if self.active_block == ActiveBlock::Input {
                 let url = self.input_component.input.clone();
                 let response = self.runtime.block_on(crate::request::send_get_request(&url.value()));
+
+                self.session.push_history(url.to_string());
                 match response {
                     Ok(body) => self.message_component.message = body,
                     Err(err) => self.message_component.message = format!("Error: {}", err),
