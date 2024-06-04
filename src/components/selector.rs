@@ -1,13 +1,16 @@
-use tui::backend::Backend;
-use tui::layout::Rect;
-use tui::widgets::{Block, Borders, List, ListItem, Paragraph};
-use tui::style::{Color, Modifier, Style};
-use tui::Frame;
+use ratatui::backend::Backend;
+use ratatui::layout::Rect;
+use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::Frame;
 use crossterm::event::KeyCode;
-use tui::widgets::ListState;
+use ratatui::widgets::ListState;
 use std::cell::RefCell;
+use ratatui::widgets::{List, ListItem};
 
 use crate::ui::Component;
+
+
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum HttpMethod {
@@ -59,7 +62,7 @@ impl SelectorComponent {
 }
 
 impl Component for SelectorComponent {
-    fn draw<B: Backend>(&self, f: &mut Frame<B>, area: Rect, is_active: bool) {
+    fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool) {
         let block = Block::default()
             .borders(Borders::ALL)
             .title("Method")

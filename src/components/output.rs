@@ -1,11 +1,12 @@
-use tui::backend::Backend;
-use tui::layout::Rect;
-use tui::widgets::{Block, Borders, Paragraph};
-use tui::style::{Color, Style};
-use tui::Frame;
+use ratatui::backend::Backend;
+use ratatui::layout::Rect;
+use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::style::{Color,  Style};
+use ratatui::Frame;
 use crossterm::event::KeyCode;
 
 use crate::ui::Component;
+use ratatui::{prelude::*, widgets::*};
 
 pub struct OutputComponent {
     pub message: String,
@@ -24,7 +25,7 @@ impl OutputComponent {
 }
 
 impl Component for OutputComponent {
-    fn draw<B: Backend>(&self, f: &mut Frame<B>, area: Rect, is_active: bool) {
+    fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool) {
         let block = Block::default()
             .borders(Borders::ALL)
             .title("Message")
@@ -33,11 +34,35 @@ impl Component for OutputComponent {
             } else {
                 Color::White
             }));
+        
         let paragraph = Paragraph::new(self.message.clone())
             .block(block)
             .style(Style::default().fg(Color::Green))
-            .scroll((self.scroll_y, self.scroll_x));
+            .scroll((self.scroll_y, 0));
+
+
+            let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(Some("↑"))
+            .end_symbol(Some("↓"));
+        
+        let mut scrollbar_state = ScrollbarState::new(self.message.lines().count())
+            .position(self.scroll_y as usize);
+        
+        
         f.render_widget(paragraph, area);
+
+        
+      
+        
+        // Render the scrollbar
+        f.render_stateful_widget(
+            scrollbar,
+            area.inner(&Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            &mut scrollbar_state,
+        );
     }
 
     fn keybinds(&mut self, key: KeyCode) {

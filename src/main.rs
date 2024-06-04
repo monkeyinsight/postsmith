@@ -1,6 +1,7 @@
 mod components;
 mod request;
 mod ui;
+
 use std::io;
 
 use crossterm::{
@@ -8,7 +9,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use tui::{
+use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
 };
