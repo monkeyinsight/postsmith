@@ -20,6 +20,7 @@ pub struct RequestComponent {
     pub list_state: RefCell<ListState>,
     pub headers: Vec<RequestHeaders>,
     pub selected_header: usize,
+    pub writable: bool
 }
 
 pub enum RequestHeaders {
@@ -66,6 +67,7 @@ impl RequestComponent {
             list_state: RefCell::new(list_state),
             headers,
             selected_header: 0,
+            writable: false
         }
     }
 }
@@ -78,7 +80,7 @@ impl Component for RequestComponent {
             .split(area);
 
         let header_spans: Vec<Span> = self.headers.iter().enumerate().map(|(i, header)| {
-            let header_text = header.to_string();
+            let header_text = format!("{} ", header.to_string()); 
             if i == self.selected_header {
                 Span::styled(header_text, Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
             } else {
@@ -113,7 +115,7 @@ impl Component for RequestComponent {
             .block(input_block)
             .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
 
-        if is_active {
+        if is_active && self.writable {
             f.set_cursor(
                 chunks[1].x + self.input.visual_cursor() as u16 + 1,
                 chunks[1].y + 1,
@@ -126,21 +128,38 @@ impl Component for RequestComponent {
     fn keybinds(&mut self, key: KeyCode) {
         match key {
             KeyCode::Left | KeyCode::Char('[') => {
-                if self.selected_header > 0 {
-                    self.selected_header -= 1;
-                } else{
-                    self.selected_header = self.headers.len() - 1
+                if !self.writable{
+                    if self.selected_header > 0 {
+                        self.selected_header -= 1;
+                    } else{
+                        self.selected_header = self.headers.len() - 1
+                    }
+                } else {
+                    self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
                 }
+                
             }
             KeyCode::Right | KeyCode::Char(']') => {
-                if self.selected_header < self.headers.len() - 1 {
-                    self.selected_header += 1;
+                if !self.writable {
+                    if self.selected_header < self.headers.len() - 1 {
+                        self.selected_header += 1;
+                    } else {
+                        self.selected_header = 0;
+                    }
                 } else {
-                    self.selected_header = 0;
+                    self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
                 }
+                
+            }
+            KeyCode::Enter => {
+                self.writable = !self.writable;
             }
             _ => {
+                if self.writable {
                 self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+
+                }
+               
             }
         }
     }
