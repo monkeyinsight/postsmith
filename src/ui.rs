@@ -1,12 +1,10 @@
 use crossterm::event::KeyCode;
-use tui::backend::Backend;
-use tui::layout::{Constraint, Direction, Layout};
-use tui::Terminal;
+use ratatui::{backend::Backend, layout::{Constraint, Direction, Layout, Rect}, Terminal, Frame};
 use crate::components::{InputComponent, OutputComponent, SelectorComponent};
 
 pub trait Component {
-    fn draw<B: Backend>(&self, f: &mut tui::Frame<B>, area: tui::layout::Rect, is_active: bool);
-    fn keybinds(&mut self, key: crossterm::event::KeyCode);
+    fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool);
+    fn keybinds(&mut self, key: KeyCode);
 }
 
 pub struct AppState {
@@ -42,23 +40,18 @@ impl AppState {
             ActiveBlock::Message => self.message_component.keybinds(key),
         }
 
-        if key == KeyCode::BackTab{
-         
-                
-                self.active_block = match self.active_block {
-                    ActiveBlock::Method => ActiveBlock::Message,
-                    ActiveBlock::Input => ActiveBlock::Method,
-                    ActiveBlock::Message => ActiveBlock::Input,
-            
+        if key == KeyCode::BackTab {
+            self.active_block = match self.active_block {
+                ActiveBlock::Method => ActiveBlock::Message,
+                ActiveBlock::Input => ActiveBlock::Method,
+                ActiveBlock::Message => ActiveBlock::Input,
             }
-            } else if key == KeyCode::Tab  {
-                // Tab: move forward
-                self.active_block = match self.active_block {
-                    ActiveBlock::Method => ActiveBlock::Input,
-                    ActiveBlock::Input => ActiveBlock::Message,
-                    ActiveBlock::Message => ActiveBlock::Method,
-                };
-            
+        } else if key == KeyCode::Tab {
+            self.active_block = match self.active_block {
+                ActiveBlock::Method => ActiveBlock::Input,
+                ActiveBlock::Input => ActiveBlock::Message,
+                ActiveBlock::Message => ActiveBlock::Method,
+            };
         } else if key == KeyCode::Enter {
             if self.active_block == ActiveBlock::Input {
                 let url = self.input_component.input.clone();
@@ -103,9 +96,9 @@ pub fn draw_ui<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState)
             )
             .split(chunks[0]);
 
-        app_state.method_component.draw(f, top_chunks[0], app_state.active_block == ActiveBlock::Method);
-        app_state.input_component.draw(f, top_chunks[1], app_state.active_block == ActiveBlock::Input);
-        app_state.message_component.draw(f, chunks[1], app_state.active_block == ActiveBlock::Message);
+        app_state.method_component.draw::<B>(f, top_chunks[0], app_state.active_block == ActiveBlock::Method);
+        app_state.input_component.draw::<B>(f, top_chunks[1], app_state.active_block == ActiveBlock::Input);
+        app_state.message_component.draw::<B>(f, chunks[1], app_state.active_block == ActiveBlock::Message);
     })?;
     Ok(())
 }
