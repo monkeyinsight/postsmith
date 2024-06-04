@@ -1,6 +1,6 @@
 use crossterm::event::KeyCode;
 use ratatui::{backend::Backend, layout::{Constraint, Direction, Layout, Rect}, Terminal, Frame};
-use crate::components::{InputComponent, OutputComponent, SelectorComponent};
+use crate::components::{InputComponent, OutputComponent, SelectorComponent, RequestComponent};
 
 pub trait Component {
     fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool);
@@ -12,6 +12,7 @@ pub struct AppState {
     pub input_component: InputComponent,
     pub message_component: OutputComponent,
     pub active_block: ActiveBlock,
+    pub request_component: RequestComponent,
     pub runtime: tokio::runtime::Runtime,
 }
 
@@ -20,6 +21,7 @@ pub enum ActiveBlock {
     Method,
     Input,
     Message,
+    Request
 }
 
 impl AppState {
@@ -29,6 +31,7 @@ impl AppState {
             input_component: InputComponent::new(),
             message_component: OutputComponent::new(),
             active_block: ActiveBlock::Method,
+            request_component: RequestComponent::new(),
             runtime: tokio::runtime::Runtime::new().unwrap(),
         }
     }
@@ -38,18 +41,21 @@ impl AppState {
             ActiveBlock::Method => self.method_component.keybinds(key),
             ActiveBlock::Input => self.input_component.keybinds(key),
             ActiveBlock::Message => self.message_component.keybinds(key),
+            ActiveBlock::Request  => self.request_component.keybinds(key)
         }
 
         if key == KeyCode::BackTab {
             self.active_block = match self.active_block {
                 ActiveBlock::Method => ActiveBlock::Message,
                 ActiveBlock::Input => ActiveBlock::Method,
-                ActiveBlock::Message => ActiveBlock::Input,
+                ActiveBlock::Message => ActiveBlock::Request,
+                ActiveBlock::Request => ActiveBlock::Input,
             }
         } else if key == KeyCode::Tab {
             self.active_block = match self.active_block {
                 ActiveBlock::Method => ActiveBlock::Input,
-                ActiveBlock::Input => ActiveBlock::Message,
+                ActiveBlock::Input => ActiveBlock::Request,
+                ActiveBlock::Request => ActiveBlock::Message,
                 ActiveBlock::Message => ActiveBlock::Method,
             };
         } else if key == KeyCode::Enter {
@@ -79,6 +85,7 @@ pub fn draw_ui<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState)
             .constraints(
                 [
                     Constraint::Length(3),
+                    Constraint::Length(6),
                     Constraint::Min(0),
                 ]
                 .as_ref(),
@@ -98,7 +105,8 @@ pub fn draw_ui<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState)
 
         app_state.method_component.draw::<B>(f, top_chunks[0], app_state.active_block == ActiveBlock::Method);
         app_state.input_component.draw::<B>(f, top_chunks[1], app_state.active_block == ActiveBlock::Input);
-        app_state.message_component.draw::<B>(f, chunks[1], app_state.active_block == ActiveBlock::Message);
+        app_state.request_component.draw::<B>(f, chunks[1], app_state.active_block == ActiveBlock::Request);
+        app_state.message_component.draw::<B>(f, chunks[2], app_state.active_block == ActiveBlock::Message);
     })?;
     Ok(())
 }
