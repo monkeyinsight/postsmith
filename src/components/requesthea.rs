@@ -17,9 +17,11 @@ use tui_input::Input;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EditingField {
-    Title,
+    Key,
     Value,
     PreviousValue,
+    Title,
+    None,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -56,6 +58,12 @@ impl RequestHeaders {
     }
 }
 
+pub struct RequestHeader {
+    pub key: String,
+    pub value: String,
+    pub previous_value: String,
+}
+
 pub struct RequestComponent {
     pub input: Input,
     pub list_state: RefCell<ListState>,
@@ -69,12 +77,7 @@ pub struct RequestComponent {
     pub show_selection: bool,
     pub show_body: bool,
     pub body_content: Vec<(RequestHeaders, String)>,  // Store body content with the selected type
-}
-
-pub struct RequestHeader {
-    pub title: String,
-    pub value: String,
-    pub previous_value: String,
+    pub adding_header: bool,
 }
 
 impl RequestComponent {
@@ -88,12 +91,12 @@ impl RequestComponent {
             list_state: RefCell::new(list_state),
             headers: vec![
                 RequestHeader {
-                    title: "Content-Type".to_string(),
+                    key: "Content-Type".to_string(),
                     value: "application/json".to_string(),
                     previous_value: "".to_string(),
                 },
                 RequestHeader {
-                    title: "Authorization".to_string(),
+                    key: "Authorization".to_string(),
                     value: "Bearer token".to_string(),
                     previous_value: "".to_string(),
                 },
@@ -107,14 +110,15 @@ impl RequestComponent {
             show_selection: false,
             show_body: false,
             body_content: vec![],
+            adding_header: false,
         }
     }
 
     fn save_header(&mut self) {
         if let Some(editing_field) = self.editing_header.take() {
             match editing_field {
-                EditingField::Title => {
-                    self.headers[self.selected_header].title = self.input.value().to_string();
+                EditingField::Key => {
+                    self.headers[self.selected_header].key = self.input.value().to_string();
                 }
                 EditingField::Value => {
                     self.headers[self.selected_header].value = self.input.value().to_string();
@@ -122,6 +126,40 @@ impl RequestComponent {
                 EditingField::PreviousValue => {
                     self.headers[self.selected_header].previous_value = self.input.value().to_string();
                 }
+                EditingField::Title | EditingField::None => {}
+            }
+            self.input = Input::default(); // Clear the input field after saving
+        }
+    }
+
+    fn add_header(&mut self) {
+        if self.adding_header {
+            match self.editing_header {
+                Some(EditingField::Key) => {
+                  
+                    self.headers.push(RequestHeader {
+                        key: self.input.value().to_string(),
+                        value: String::new(),
+                        previous_value: String::new(),
+                    });
+                    self.editing_header = Some(EditingField::Value);
+                }
+                Some(EditingField::Value) => {
+                    
+                    if let Some(header) = self.headers.last_mut() {
+                        header.value = self.input.value().to_string();
+                    }
+                    self.editing_header = Some(EditingField::PreviousValue);
+                }
+                Some(EditingField::PreviousValue) => {
+                    
+                    if let Some(header) = self.headers.last_mut() {
+                        header.previous_value = self.input.value().to_string();
+                    }
+                    self.editing_header = None;
+                    self.adding_header = false;
+                }
+                Some(EditingField::Title) | Some(EditingField::None) | None => {}
             }
             self.input = Input::default(); // Clear the input field after saving
         }
@@ -159,7 +197,7 @@ impl Component for RequestComponent {
 
         if self.show_body {
             let body_tab_spans: Vec<Span> = self.body_tabs.iter().enumerate().map(|(i, tab)| {
-                let tab_text = format!("{} ", tab.to_string()); 
+                let tab_text = format!("{} ", tab.to_string());
                 if i == self.selected_body_tab {
                     Span::styled(tab_text, Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
                 } else {
@@ -204,11 +242,12 @@ impl Component for RequestComponent {
             f.render_widget(paragraph, chunks[1]);
         } else {
             let header_spans: Vec<Span> = self.headers.iter().enumerate().map(|(i, header)| {
-                let header_text = format!("{}: {} (prev: {}) ", header.title, header.value, header.previous_value); 
+                let header_text = format!("{}: {} (prev: {}) ", header.key, header.value, header.previous_value);
                 if i == self.selected_header {
                     Span::styled(header_text, Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
                 } else {
                     Span::raw(header_text)
+
                 }
             }).collect();
 
@@ -326,15 +365,15 @@ impl Component for RequestComponent {
                 if self.show_selection {
                     if let Some(selected) = self.list_state.borrow().selected() {
                         match selected {
-                            0 => self.editing_header = Some(EditingField::Title),
+                            0 => self.editing_header = Some(EditingField::Key),
                             1 => self.editing_header = Some(EditingField::Value),
                             2 => self.editing_header = Some(EditingField::PreviousValue),
                             _ => {}
                         }
                         self.input = Input::default();
                         match self.editing_header {
-                            Some(EditingField::Title) => {
-                                self.input = Input::from(self.headers[self.selected_header].title.clone());
+                            Some(EditingField::Key) => {
+                                self.input = Input::from(self.headers[self.selected_header].key.clone());
                             }
                             Some(EditingField::Value) => {
                                 self.input = Input::from(self.headers[self.selected_header].value.clone());
@@ -342,7 +381,7 @@ impl Component for RequestComponent {
                             Some(EditingField::PreviousValue) => {
                                 self.input = Input::from(self.headers[self.selected_header].previous_value.clone());
                             }
-                            None => {}
+                            _ => {}
                         }
                         self.show_selection = false;
                         self.writable = true;
@@ -364,6 +403,8 @@ impl Component for RequestComponent {
                 } else if self.writable {
                     self.save_header();
                     self.writable = false;
+                } else if self.adding_header {
+                    self.add_header();
                 } else {
                     self.show_selection = true;
                 }
@@ -402,8 +443,15 @@ impl Component for RequestComponent {
                 self.show_selection = false;
                 self.writable = false;
             }
+            KeyCode::Char('a') => {
+                if !self.writable && !self.adding_header {
+                    self.adding_header = true;
+                    self.editing_header = Some(EditingField::Key);
+                    self.input = Input::default();
+                }
+            }
             _ => {
-                if self.writable {
+                if self.writable || self.adding_header {
                     self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
                 }
             }
