@@ -15,32 +15,14 @@ use crate::ui::Component;
 use tui_input::backend::crossterm::EventHandler;
 use tui_input::Input;
 
-pub struct RequestComponent {
-    pub input: Input,
-    pub list_state: RefCell<ListState>,
-    pub headers: Vec<RequestHeader>,
-    pub selected_header: usize,
-    pub writable: bool,
-    pub is_modal_open: bool,
-    pub selected_body_tab: usize,
-    pub body_tabs: Vec<RequestHeaders>,
-    pub editing_header: Option<EditingField>,
-    pub show_selection: bool,
-    pub show_body: bool,
-}
-
-pub struct RequestHeader {
-    pub title: String,
-    pub value: String,
-    pub previous_value: String,
-}
-
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EditingField {
     Title,
     Value,
     PreviousValue,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RequestHeaders {
     None,
     FormData,
@@ -74,6 +56,27 @@ impl RequestHeaders {
     }
 }
 
+pub struct RequestComponent {
+    pub input: Input,
+    pub list_state: RefCell<ListState>,
+    pub headers: Vec<RequestHeader>,
+    pub selected_header: usize,
+    pub writable: bool,
+    pub is_modal_open: bool,
+    pub selected_body_tab: usize,
+    pub body_tabs: Vec<RequestHeaders>,
+    pub editing_header: Option<EditingField>,
+    pub show_selection: bool,
+    pub show_body: bool,
+    pub body_content: Vec<(RequestHeaders, String)>,  // Store body content with the selected type
+}
+
+pub struct RequestHeader {
+    pub title: String,
+    pub value: String,
+    pub previous_value: String,
+}
+
 impl RequestComponent {
     pub fn new() -> Self {
         let headers = RequestHeaders::all_request();
@@ -103,6 +106,7 @@ impl RequestComponent {
             editing_header: None,
             show_selection: false,
             show_body: false,
+            body_content: vec![],
         }
     }
 
@@ -119,12 +123,30 @@ impl RequestComponent {
                     self.headers[self.selected_header].previous_value = self.input.value().to_string();
                 }
             }
-            self.input = Input::default(); 
+            self.input = Input::default(); // Clear the input field after saving
         }
     }
 
     fn save_body(&mut self) {
-       
+        let selected_tab = self.body_tabs[self.selected_body_tab].clone();
+        let body_text = self.input.value().to_string();
+        // Check if there's already content for the selected tab, and update it
+        if let Some(existing_entry) = self.body_content.iter_mut().find(|(tab, _)| *tab == selected_tab) {
+            existing_entry.1 = body_text;
+        } else {
+            // Otherwise, add a new entry
+            self.body_content.push((selected_tab, body_text));
+        }
+        self.input = Input::default(); // Clear the input field after saving
+    }
+
+    fn load_body(&mut self) {
+        let selected_tab = self.body_tabs[self.selected_body_tab].clone();
+        if let Some((_, body_text)) = self.body_content.iter().find(|(tab, _)| *tab == selected_tab) {
+            self.input = Input::from(body_text.clone());
+        } else {
+            self.input = Input::default();
+        }
     }
 }
 
@@ -259,16 +281,13 @@ impl Component for RequestComponent {
         match key {
             KeyCode::Char('[') => {
                 if !self.writable {
-                    if self.show_body {
-                        self.show_body = false;
-                    }
+                    self.show_body = false;
                 }
             }
             KeyCode::Char(']') => {
                 if !self.writable {
-                    if !self.show_body {
-                        self.show_body = true;
-                    }
+                    self.show_body = true;
+                    self.load_body();
                 }
             }
             KeyCode::Left => {
@@ -278,6 +297,7 @@ impl Component for RequestComponent {
                     } else {
                         self.selected_body_tab = self.body_tabs.len() - 1;
                     }
+                    self.load_body();
                 } else if !self.writable {
                     if self.selected_header > 0 {
                         self.selected_header -= 1;
@@ -293,6 +313,7 @@ impl Component for RequestComponent {
                     } else {
                         self.selected_body_tab = 0;
                     }
+                    self.load_body();
                 } else if !self.writable {
                     if self.selected_header < self.headers.len() - 1 {
                         self.selected_header += 1;
@@ -326,12 +347,22 @@ impl Component for RequestComponent {
                         self.show_selection = false;
                         self.writable = true;
                     }
-                } else if self.writable {
-                    if self.show_body {
-                        self.save_body();
-                    } else {
-                        self.save_header();
+                } else if self.show_body {
+                    if self.body_tabs[self.selected_body_tab] != RequestHeaders::None {
+                        if self.writable {
+                            self.save_body();
+                            self.writable = false;
+                            if self.selected_body_tab < self.body_tabs.len() - 1 {
+                                self.selected_body_tab += 1;
+                            } else {
+                                self.selected_body_tab = 0;
+                            }
+                        } else {
+                            self.writable = true;
+                        }
                     }
+                } else if self.writable {
+                    self.save_header();
                     self.writable = false;
                 } else {
                     self.show_selection = true;
