@@ -1,7 +1,7 @@
 use ratatui::backend::Backend;
 use ratatui::layout::Rect;
 use ratatui::widgets::{Block, Borders, Paragraph};
-use ratatui::style::{Color,  Style};
+use ratatui::style::{Color, Style};
 use ratatui::Frame;
 use crossterm::event::KeyCode;
 
@@ -39,22 +39,15 @@ impl Component for OutputComponent {
             .block(block)
             .style(Style::default().fg(Color::Green))
             .scroll((self.scroll_y, 0));
-
-
-            let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("↑"))
             .end_symbol(Some("↓"));
         
         let mut scrollbar_state = ScrollbarState::new(self.message.lines().count())
             .position(self.scroll_y as usize);
         
-        
         f.render_widget(paragraph, area);
-
-        
-      
-        
-        // Render the scrollbar
         f.render_stateful_widget(
             scrollbar,
             area.inner(&Margin {
@@ -66,14 +59,17 @@ impl Component for OutputComponent {
     }
 
     fn keybinds(&mut self, key: KeyCode) {
+        let max_scroll_y = self.message.lines().count().saturating_sub(1) as u16;
         match key {
             KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('K') => {
                 if self.scroll_y > 0 {
                     self.scroll_y -= 1;
                 }
             }
-            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J')=> {
-                self.scroll_y += 1;
+            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J') => {
+                if self.scroll_y < max_scroll_y {
+                    self.scroll_y += 1;
+                }
             }
             KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('H') => {
                 if self.scroll_x > 0 {
