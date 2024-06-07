@@ -68,7 +68,7 @@ impl AppState {
                 }
             }
         } else if key == KeyCode::Char('q') {
-            if self.active_block != ActiveBlock::Input {
+            if self.active_block != ActiveBlock::Input && !self.request_component.adding_header && !self.request_component.writable {
                 return true;
             }
         }

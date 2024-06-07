@@ -329,6 +329,13 @@ impl Component for RequestComponent {
                     self.load_body();
                 }
             }
+            KeyCode::Char('q') => {
+                    if self.writable || self.adding_header {
+                        self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+                       
+                    }
+                    return;
+            }
             KeyCode::Left => {
                 if self.show_body {
                     if self.selected_body_tab > 0 {
@@ -336,7 +343,9 @@ impl Component for RequestComponent {
                     } else {
                         self.selected_body_tab = self.body_tabs.len() - 1;
                     }
-                    self.load_body();
+                    self.load_body();} else if self.show_selection{
+
+                    
                 } else if !self.writable {
                     if self.selected_header > 0 {
                         self.selected_header -= 1;
@@ -352,8 +361,10 @@ impl Component for RequestComponent {
                     } else {
                         self.selected_body_tab = 0;
                     }
-                    self.load_body();
-                } else if !self.writable {
+                    self.load_body();} else if self.show_selection{
+
+                    }
+                 else if !self.writable {
                     if self.selected_header < self.headers.len() - 1 {
                         self.selected_header += 1;
                     } else {
@@ -422,6 +433,11 @@ impl Component for RequestComponent {
                         None => 0,
                     };
                     self.list_state.borrow_mut().select(Some(i));
+                } else{
+                    if self.writable || self.adding_header {
+                        self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+                       
+                    }
                 }
             }
             KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J') => {
@@ -437,6 +453,11 @@ impl Component for RequestComponent {
                         None => 0,
                     };
                     self.list_state.borrow_mut().select(Some(i));
+                } else {
+                    if self.writable || self.adding_header {
+                        self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+                       
+                    }
                 }
             }
             KeyCode::Esc => {
