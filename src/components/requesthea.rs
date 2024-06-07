@@ -78,6 +78,7 @@ pub struct RequestComponent {
     pub show_body: bool,
     pub body_content: Vec<(RequestHeaders, String)>,  // Store body content with the selected type
     pub adding_header: bool,
+    pub delete: bool
 }
 
 impl RequestComponent {
@@ -111,6 +112,7 @@ impl RequestComponent {
             show_body: false,
             body_content: vec![],
             adding_header: false,
+            delete: false
         }
     }
 
@@ -129,6 +131,15 @@ impl RequestComponent {
                 EditingField::Title | EditingField::None => {}
             }
             self.input = Input::default(); // Clear the input field after saving
+        }
+    }
+
+    fn delete_header(&mut self) {
+        if !self.headers.is_empty() {
+            self.headers.remove(self.selected_header);
+            if self.selected_header >= self.headers.len() {
+                self.selected_header = self.headers.len().saturating_sub(1);
+            }
         }
     }
 
@@ -292,6 +303,33 @@ impl Component for RequestComponent {
                 f.render_stateful_widget(list, area, &mut self.list_state.borrow_mut());
             }
 
+            if self.delete {
+                let size = f.size();
+                let menu_width = 30;
+                let menu_height = 10;
+                let menu_x = (size.width - menu_width) / 2;
+                let menu_y = (size.height - menu_height) / 2;
+                let area = Rect::new(menu_x, menu_y, menu_width, menu_height);
+    
+                let selection_block = Block::default()
+                    .borders(Borders::ALL)
+                    .title("Confirm Deletion")
+                    .style(Style::default().fg(Color::Red));
+    
+                let fields = vec!["Press Enter to Delete"];
+                let field_list: Vec<ListItem> = fields
+                    .iter()
+                    .map(|field| ListItem::new(*field))
+                    .collect();
+    
+                let list = List::new(field_list)
+                    .block(selection_block)
+                    .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+                    .highlight_symbol(">>");
+    
+                f.render_stateful_widget(list, area, &mut self.list_state.borrow_mut());
+            }
+
             let input_block = Block::new()
                 .borders(Borders::ALL)
                 .title("Input")
@@ -337,7 +375,10 @@ impl Component for RequestComponent {
                     return;
             }
             KeyCode::Left => {
-                if self.show_body {
+                if self.delete {
+
+                }
+               else if self.show_body {
                     if self.selected_body_tab > 0 {
                         self.selected_body_tab -= 1;
                     } else {
@@ -346,7 +387,7 @@ impl Component for RequestComponent {
                     self.load_body();} else if self.show_selection{
 
                     
-                } else if !self.writable {
+                } else if !self.writable  {
                     if self.selected_header > 0 {
                         self.selected_header -= 1;
                     } else {
@@ -373,6 +414,12 @@ impl Component for RequestComponent {
                 }
             }
             KeyCode::Enter => {
+
+                if self.delete {
+                    self.delete_header();
+                    self.delete = false;
+
+                }
                 if self.show_selection {
                     if let Some(selected) = self.list_state.borrow().selected() {
                         match selected {
@@ -420,6 +467,13 @@ impl Component for RequestComponent {
                     self.show_selection = true;
                 }
             }
+
+
+            KeyCode::Char('d') | KeyCode::Char('D') => {
+                if !self.writable && !self.adding_header {
+                    self.delete = true; // Set the delete flag to true
+                }
+            }
             KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('K') => {
                 if self.show_selection {
                     let i = match self.list_state.borrow().selected() {
@@ -463,6 +517,7 @@ impl Component for RequestComponent {
             KeyCode::Esc => {
                 self.show_selection = false;
                 self.writable = false;
+                self.delete = false;
             }
             KeyCode::Char('a') => {
                 if !self.writable && !self.adding_header {
