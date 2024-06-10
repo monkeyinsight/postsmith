@@ -20,8 +20,7 @@ pub enum EditingField {
     Key,
     Value,
     PreviousValue,
-    Title,
-    None,
+    
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -83,7 +82,7 @@ pub struct RequestComponent {
 
 impl RequestComponent {
     pub fn new() -> Self {
-        let headers = RequestHeaders::all_request();
+      //  let headers = RequestHeaders::all_request();
         let mut list_state = ListState::default();
         list_state.select(Some(0));
 
@@ -128,7 +127,7 @@ impl RequestComponent {
                 EditingField::PreviousValue => {
                     self.headers[self.selected_header].previous_value = self.input.value().to_string();
                 }
-                EditingField::Title | EditingField::None => {}
+                
             }
             self.input = Input::default(); // Clear the input field after saving
         }
@@ -168,7 +167,11 @@ impl RequestComponent {
                     self.adding_header = false;
                     self.selected_header = self.headers.len().saturating_sub(1); // Move selection to the newly added header
                 }
-                Some(EditingField::Title) | Some(EditingField::None) | None => {}
+                None => {
+
+                }
+               
+               
             }
             self.input = Input::default(); // Clear the input field after saving
         }
@@ -199,6 +202,7 @@ impl RequestComponent {
 
 impl Component for RequestComponent {
     fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool) {
+
         let chunks = ratatui::layout::Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
             .constraints([ratatui::layout::Constraint::Length(3), ratatui::layout::Constraint::Min(0)].as_ref())
@@ -213,37 +217,28 @@ impl Component for RequestComponent {
             };
 
             let adding_paragraph = Paragraph::new(current_field)
-                .block(Block::new()
-                    .borders(Borders::ALL)
-                    .title("Current Field")
-                    .style(Style::default().fg(Color::Green)));
+                .block(Block::default().borders(Borders::ALL).title("Current Field").style(Style::default().fg(Color::Green)));
 
             f.render_widget(adding_paragraph, chunks[0]);
 
-            let input_block = Block::new()
-            .borders(Borders::ALL)
-            .title("Body Input")
-            .style(Style::default().fg(if is_active {
-                Color::Green
-            } else {
-                Color::White
-            }));
+            let input_block = Block::default()
+                .borders(Borders::ALL)
+                .title("Body Input")
+                .style(Style::default().fg(if is_active { Color::Green } else { Color::White }));
 
-        let paragraph = Paragraph::new(self.input.value())
-            .block(input_block)
-            .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+            let paragraph = Paragraph::new(self.input.value())
+                .block(input_block)
+                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
 
-        if is_active && self.writable {
-            f.set_cursor(
-                chunks[1].x + self.input.visual_cursor() as u16 + 1,
-                chunks[1].y + 1,
-            );
-        }
+            f.render_widget(paragraph, chunks[1]);
 
-        f.render_widget(paragraph, chunks[1]);
-        } else
-
-        if self.show_body {
+            
+                f.set_cursor(
+                    chunks[1].x + self.input.visual_cursor() as u16 + 1,
+                    chunks[1].y + 1,
+                );
+            
+        } else if self.show_body {
             let body_tab_spans: Vec<Span> = self.body_tabs.iter().enumerate().map(|(i, tab)| {
                 let tab_text = format!("{} ", tab.to_string());
                 if i == self.selected_body_tab {
@@ -256,30 +251,20 @@ impl Component for RequestComponent {
             let body_tab_line = Line::from(body_tab_spans);
 
             let body_tabs_paragraph = Paragraph::new(Text::from(vec![body_tab_line]))
-                .block(Block::new()
-                    .borders(Borders::ALL)
-                    .title("Body Tabs")
-                    .style(Style::default().fg(if is_active {
-                        Color::Green
-                    } else {
-                        Color::White
-                    })));
+                .block(Block::default().borders(Borders::ALL).title("Body Tabs").style(Style::default().fg(if is_active { Color::Green } else { Color::White })));
 
             f.render_widget(body_tabs_paragraph, chunks[0]);
 
-
-            let input_block = Block::new()
+            let input_block = Block::default()
                 .borders(Borders::ALL)
                 .title("Body Input")
-                .style(Style::default().fg(if is_active {
-                    Color::Green
-                } else {
-                    Color::White
-                }));
+                .style(Style::default().fg(if is_active { Color::Green } else { Color::White }));
 
             let paragraph = Paragraph::new(self.input.value())
                 .block(input_block)
                 .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+
+            f.render_widget(paragraph, chunks[1]);
 
             if is_active && self.writable {
                 f.set_cursor(
@@ -287,10 +272,7 @@ impl Component for RequestComponent {
                     chunks[1].y + 1,
                 );
             }
-
-            f.render_widget(paragraph, chunks[1]);
         } else {
-            // Determine the number of visible headers
             let visible_count = (chunks[0].height as usize).min(self.headers.len());
             let scroll_offset = if self.selected_header + 1 > visible_count {
                 self.selected_header + 1 - visible_count
@@ -308,12 +290,10 @@ impl Component for RequestComponent {
                 }
             }).collect();
 
-            // Add visual indicators for additional headers above
             if scroll_offset > 0 {
                 header_spans.insert(0, Span::styled("↑ More headers above ↑", Style::default().fg(Color::Gray)));
             }
 
-            // Add visual indicators for additional headers below
             if end_index < self.headers.len() {
                 header_spans.push(Span::styled("↓ More headers below ↓", Style::default().fg(Color::Gray)));
             }
@@ -321,14 +301,7 @@ impl Component for RequestComponent {
             let header_line = Line::from(header_spans);
 
             let headers_paragraph = Paragraph::new(Text::from(vec![header_line]))
-                .block(Block::new()
-                    .borders(Borders::ALL)
-                    .title("Request Headers")
-                    .style(Style::default().fg(if is_active {
-                        Color::Green
-                    } else {
-                        Color::White
-                    })));
+                .block(Block::default().borders(Borders::ALL).title("Request Headers").style(Style::default().fg(if is_active { Color::Green } else { Color::White })));
 
             f.render_widget(headers_paragraph, chunks[0]);
 
@@ -346,10 +319,7 @@ impl Component for RequestComponent {
                     .style(Style::default().fg(Color::Green));
 
                 let fields = vec!["Title", "Value", "Previous Value"];
-                let field_list: Vec<ListItem> = fields
-                    .iter()
-                    .map(|field| ListItem::new(*field))
-                    .collect();
+                let field_list: Vec<ListItem> = fields.iter().map(|field| ListItem::new(*field)).collect();
 
                 let list = List::new(field_list)
                     .block(selection_block)
@@ -373,10 +343,7 @@ impl Component for RequestComponent {
                     .style(Style::default().fg(Color::Red));
 
                 let fields = vec!["Press Enter to Delete"];
-                let field_list: Vec<ListItem> = fields
-                    .iter()
-                    .map(|field| ListItem::new(*field))
-                    .collect();
+                let field_list: Vec<ListItem> = fields.iter().map(|field| ListItem::new(*field)).collect();
 
                 let list = List::new(field_list)
                     .block(selection_block)
@@ -386,18 +353,16 @@ impl Component for RequestComponent {
                 f.render_stateful_widget(list, area, &mut self.list_state.borrow_mut());
             }
 
-            let input_block = Block::new()
+            let input_block = Block::default()
                 .borders(Borders::ALL)
                 .title("Input")
-                .style(Style::default().fg(if is_active {
-                    Color::Green
-                } else {
-                    Color::White
-                }));
+                .style(Style::default().fg(if is_active { Color::Green } else { Color::White }));
 
             let paragraph = Paragraph::new(self.input.value())
                 .block(input_block)
                 .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+
+            f.render_widget(paragraph, chunks[1]);
 
             if is_active && (self.writable || self.adding_header) {
                 f.set_cursor(
@@ -405,10 +370,9 @@ impl Component for RequestComponent {
                     chunks[1].y + 1,
                 );
             }
-
-            f.render_widget(paragraph, chunks[1]);
         }
     }
+
 
     fn keybinds(&mut self, key: KeyCode) {
         match key {
@@ -572,9 +536,20 @@ impl Component for RequestComponent {
                 }
             }
             KeyCode::Esc => {
-                self.show_selection = false;
-                self.writable = false;
-                self.delete = false;
+                if self.adding_header {
+                    match self.editing_header {
+                        Some(EditingField::Value) => self.editing_header = Some(EditingField::Key),
+                        Some(EditingField::PreviousValue) => self.editing_header = Some(EditingField::Value),
+                        _ => {
+                            self.adding_header = false;
+                            self.editing_header = None;
+                        }
+                    }
+                } else {
+                    self.show_selection = false;
+                    self.writable = false;
+                    self.delete = false;
+                }
             }
             KeyCode::Char('a') => {
                 if !self.writable && !self.adding_header {
