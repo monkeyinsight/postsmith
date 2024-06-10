@@ -1,5 +1,5 @@
-use crate::components::{history, HistoryComponent, InputComponent, OutputComponent, SelectorComponent};
-use crate::session::{self, Session};
+use crate::components::{ HistoryComponent, InputComponent, OutputComponent, SelectorComponent};
+use crate::session::Session;
 use crossterm::event::KeyCode;
 use ratatui::{
     backend::Backend,
@@ -83,14 +83,16 @@ impl AppState {
             }
         } else if key == KeyCode::Char('H') {
             if self.active_block == ActiveBlock::Input {
-                
+                self.active_block = ActiveBlock::Input;
             } else if self.active_block != ActiveBlock::History {
                 self.history_component.history = self.session.get_history();
                 self.active_block = ActiveBlock::History;
-            } else {
+            }
+        } else if key == KeyCode::Esc {
+            if self.active_block == ActiveBlock::History {
                 self.active_block = ActiveBlock::Method;
             }
-        } else if key == KeyCode::Char('q') {
+        }  else if key == KeyCode::Char('q') {
             if self.active_block != ActiveBlock::Input {
                 return true;
             }
