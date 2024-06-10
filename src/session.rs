@@ -1,44 +1,73 @@
 use dirs::config_dir;
-use std::{fs, io::Write};
 use serde::{Deserialize, Serialize};
+use std::{fs, io::Write};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct History {
     date: String,
     action: String,
+    //  Danik is working on it
+    //header: String,
+    url: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
-    history: Vec<History>
+    history: Vec<History>,
 }
 
 impl Session {
     pub fn new() -> Self {
-        Self {
-            history: Vec::new()
-        }
+        let mut session = Self {
+            history: Vec::new(),
+        };
+        session.load().unwrap_or_default();
+        session
     }
 
-    pub fn push_history(&mut self, request: String) {
+    pub fn push_history(&mut self, request: &str, /*header: String,*/ url: String) {
         let history = History {
             date: chrono::offset::Local::now().to_string(),
-            action: request
+            action: request.to_string(),
+            //header: header,
+            url: url,
         };
 
-        let _ = &self.history.push(history);
+        self.history.push(history);
 
-        let _ = &self.save();
+        self.save().unwrap();
     }
 
     fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let config_path = config_dir().unwrap().join("postsmith");
+        if !config_path.exists() {
+            fs::create_dir_all(&config_path)?; // Create directory if it doesn't exist
+        }
+        let file_path = config_path.join("session");
         let mut file = fs::OpenOptions::new()
-            .create_new(true)
+            .create(true)
             .write(true)
-            .append(true)
-            .open(config_dir().unwrap().into_os_string().into_string().unwrap() + "/postsmith/session")?;
+            .truncate(true) // Overwrite existing file
+            .open(file_path)?;
 
         file.write_all(serde_json::to_string(&self).unwrap().as_bytes())?;
-        return Ok(());
+        Ok(())
+    }
+
+    fn load(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let file_path = config_dir().unwrap().join("postsmith/session");
+        if file_path.exists() {
+            let data = fs::read_to_string(file_path)?;
+            let session: Session = serde_json::from_str(&data)?;
+            self.history = session.history;
+        }
+        Ok(())
+    }
+
+    pub fn get_history(&self) -> String {
+        self.history
+            .iter()
+            .map(|h| format!("{} - {} - {}\n", h.date, h.action, h.url))
+            .collect()
     }
 }
