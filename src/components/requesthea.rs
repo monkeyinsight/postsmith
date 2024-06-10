@@ -75,7 +75,7 @@ pub struct RequestComponent {
     pub editing_header: Option<EditingField>,
     pub show_selection: bool,
     pub show_body: bool,
-    pub body_content: Vec<(RequestHeaders, String)>,  // Store body content with the selected type
+    pub body_content: Vec<(RequestHeaders, String)>,  
     pub adding_header: bool,
     pub delete: bool
 }
@@ -129,7 +129,7 @@ impl RequestComponent {
                 }
                 
             }
-            self.input = Input::default(); // Clear the input field after saving
+            self.input = Input::default(); 
         }
     }
 
@@ -165,7 +165,7 @@ impl RequestComponent {
                     }
                     self.editing_header = None;
                     self.adding_header = false;
-                    self.selected_header = self.headers.len().saturating_sub(1); // Move selection to the newly added header
+                    self.selected_header = self.headers.len().saturating_sub(1); 
                 }
                 None => {
 
@@ -173,21 +173,21 @@ impl RequestComponent {
                
                
             }
-            self.input = Input::default(); // Clear the input field after saving
+            self.input = Input::default(); 
         }
     }
 
     fn save_body(&mut self) {
         let selected_tab = self.body_tabs[self.selected_body_tab].clone();
         let body_text = self.input.value().to_string();
-        // Check if there's already content for the selected tab, and update it
+        
         if let Some(existing_entry) = self.body_content.iter_mut().find(|(tab, _)| *tab == selected_tab) {
             existing_entry.1 = body_text;
         } else {
-            // Otherwise, add a new entry
+          
             self.body_content.push((selected_tab, body_text));
         }
-        self.input = Input::default(); // Clear the input field after saving
+        self.input = Input::default(); 
     }
 
     fn load_body(&mut self) {
@@ -291,11 +291,11 @@ impl Component for RequestComponent {
             }).collect();
 
             if scroll_offset > 0 {
-                header_spans.insert(0, Span::styled("↑ More headers above ↑", Style::default().fg(Color::Gray)));
+                header_spans.insert(0, Span::styled("...", Style::default().fg(Color::Gray)));
             }
 
             if end_index < self.headers.len() {
-                header_spans.push(Span::styled("↓ More headers below ↓", Style::default().fg(Color::Gray)));
+                header_spans.push(Span::styled("...", Style::default().fg(Color::Gray)));
             }
 
             let header_line = Line::from(header_spans);
@@ -494,7 +494,7 @@ impl Component for RequestComponent {
             }
             KeyCode::Char('d') | KeyCode::Char('D') => {
                 if !self.writable && !self.adding_header {
-                    self.delete = true; // Set the delete flag to true
+                    self.delete = true;
                 }
             }
             KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('K') => {
