@@ -22,9 +22,6 @@ pub enum EditingField {
     PreviousValue,
 }
 
-
-
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RequestHeaders {
     None,
@@ -221,48 +218,41 @@ impl RequestComponent {
 
 impl Component for RequestComponent {
     fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool) {
+      
+
+        
         let chunks = ratatui::layout::Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
-            .constraints([ratatui::layout::Constraint::Length(3), ratatui::layout::Constraint::Min(0)].as_ref())
+            .constraints([ratatui::layout::Constraint::Length(3), ratatui::layout::Constraint::Length(6)].as_ref())
             .split(area);
 
-        if !self.show_body{
+           if !self.show_body {
+            let chunks = ratatui::layout::Layout::default()
+            .direction(ratatui::layout::Direction::Vertical)
+            .constraints([ratatui::layout::Constraint::Length(9), ratatui::layout::Constraint::Min(0)].as_ref())
+            .split(area);
+           
             
-        // Draw the headers at the top
-        let visible_count = (chunks[0].height as usize).min(self.headers.len());
-        let scroll_offset = if self.selected_header + 1 > visible_count {
-            self.selected_header + 1 - visible_count
-        } else {
-            0
-        };
-        let end_index = (scroll_offset + visible_count).min(self.headers.len());
+            
 
-        let mut header_spans: Vec<Span> = self.headers[scroll_offset..end_index].iter().enumerate().map(|(i, header)| {
-            let header_text = format!("{}: {} (prev: {}) ", header.key, header.value, header.previous_value);
-            if i + scroll_offset == self.selected_header {
-                Span::styled(header_text, Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
-            } else {
-                Span::raw(header_text)
-            }
-        }).collect();
+            let items: Vec<ListItem> = self.headers.iter().enumerate().map(|(i, header)| {
+                let text = format!("{}: {} (prev: {})", header.key, header.value, header.previous_value);
+                let style = if i == self.selected_header {
+                    Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                };
+                ListItem::new(text).style(style)
+            }).collect();
 
-        if scroll_offset > 0 {
-            header_spans.insert(0, Span::styled("...", Style::default().fg(Color::Gray)));
+            let list = List::new(items)
+                .block(Block::default().borders(Borders::ALL).title("Request Headers"))
+                .highlight_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
+               
+
+            f.render_stateful_widget(list, chunks[0], &mut self.list_state.borrow_mut());
         }
 
-        if end_index < self.headers.len() {
-            header_spans.push(Span::styled("...", Style::default().fg(Color::Gray)));
-        }
-
-        let header_line = Line::from(header_spans);
-
-        let headers_paragraph = Paragraph::new(Text::from(vec![header_line]))
-            .block(Block::default().borders(Borders::ALL).title("Request Headers").style(Style::default().fg(if is_active { Color::Green } else { Color::White })));
-
-        f.render_widget(headers_paragraph, chunks[0]);
-
-        }
-       
         // Draw modal if open
         if self.is_modal_open {
             self.draw_modal::<B>(f);
@@ -279,16 +269,18 @@ impl Component for RequestComponent {
 
             f.render_widget(adding_paragraph, chunks[0]);
 
-            let input_block = Block::default()
-                .borders(Borders::ALL)
-                .title("Body Input")
-                .style(Style::default().fg(if is_active { Color::Green } else { Color::White }));
+            if !self.show_body {
+                let input_block = Block::default()
+                    .borders(Borders::ALL)
+                    .title("Body Input")
+                    .style(Style::default().fg(if is_active { Color::Green } else { Color::White }));
 
-            let paragraph = Paragraph::new(self.inputs[self.selected_input].value())
-                .block(input_block)
-                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+                let paragraph = Paragraph::new(self.inputs[self.selected_input].value())
+                    .block(input_block)
+                    .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
 
-            f.render_widget(paragraph, chunks[1]);
+                f.render_widget(paragraph, chunks[1]);
+            }
 
             f.set_cursor(
                 chunks[1].x + self.inputs[self.selected_input].visual_cursor() as u16 + 1,
@@ -377,17 +369,6 @@ impl Component for RequestComponent {
                 f.render_stateful_widget(list, area, &mut self.list_state.borrow_mut());
             }
 
-            let input_block = Block::default()
-                .borders(Borders::ALL)
-                .title("Input")
-                .style(Style::default().fg(if is_active { Color::Green } else { Color::White }));
-
-            let paragraph = Paragraph::new(self.inputs[self.selected_input].value())
-                .block(input_block)
-                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
-
-            f.render_widget(paragraph, chunks[1]);
-
             if is_active && (self.writable || self.adding_header || self.is_editing) {
                 f.set_cursor(
                     chunks[1].x + self.inputs[self.selected_input].visual_cursor() as u16 + 1,
@@ -404,7 +385,7 @@ impl Component for RequestComponent {
                     self.delete_header();
                     self.delete = false;
                 }
-              else  if self.is_modal_open {
+                else if self.is_modal_open {
                     if self.selected_input < 2 {
                         // Move to the next input field
                         self.selected_input += 1;
@@ -470,9 +451,12 @@ impl Component for RequestComponent {
                     };
                     self.list_state.borrow_mut().select(Some(i));
                 } else {
-                    if self.writable || self.adding_header || self.is_editing {
-                        self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+                    if self.selected_header > 0 {
+                        self.selected_header -= 1;
+                    } else {
+                        self.selected_header = self.headers.len() - 1;
                     }
+                    self.list_state.borrow_mut().select(Some(self.selected_header));
                 }
             }
             KeyCode::Down => {
@@ -486,16 +470,19 @@ impl Component for RequestComponent {
                             if i == 0 {
                                 2
                             } else {
-                                   i - 1
+                                i - 1
                             }
                         }
                         None => 0,
                     };
                     self.list_state.borrow_mut().select(Some(i));
                 } else {
-                    if self.writable || self.adding_header || self.is_editing {
-                        self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+                    if self.selected_header < self.headers.len() - 1 {
+                        self.selected_header += 1;
+                    } else {
+                        self.selected_header = 0;
                     }
+                    self.list_state.borrow_mut().select(Some(self.selected_header));
                 }
             }
             KeyCode::Char('[') => {
@@ -564,8 +551,6 @@ impl Component for RequestComponent {
                     self.delete = true;
                 }
             }
-           
-          
             _ => {
                 if self.writable || self.adding_header || self.is_editing {
                     self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
