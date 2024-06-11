@@ -197,22 +197,22 @@ impl RequestComponent {
     fn load_body(&mut self) {
         let selected_tab = self.body_tabs[self.selected_body_tab].clone();
         if let Some((_, body_text)) = self.body_content.iter().find(|(tab, _)| *tab == selected_tab) {
-            self.inputs[self.selected_input] = Input::from(body_text.clone());
+            self.inputs[0] = Input::from(body_text.clone());
         } else {
-            self.inputs[self.selected_input] = Input::default();
+            self.inputs[0] = Input::default();
         }
     }
 
     fn save_body(&mut self) {
         let selected_tab = self.body_tabs[self.selected_body_tab].clone();
-        let body_text = self.inputs[self.selected_input].value().to_string();
+        let body_text = self.inputs[0].value().to_string();
         
         if let Some(existing_entry) = self.body_content.iter_mut().find(|(tab, _)| *tab == selected_tab) {
             existing_entry.1 = body_text;
         } else {
             self.body_content.push((selected_tab, body_text));
         }
-        self.inputs[self.selected_input] = Input::default(); 
+        self.inputs[0] = Input::default(); 
     }
 }
 
@@ -309,7 +309,7 @@ impl Component for RequestComponent {
                 .title("Body Input")
                 .style(Style::default().fg(if is_active { Color::Green } else { Color::White }));
 
-            let paragraph = Paragraph::new(self.inputs[self.selected_input].value())
+            let paragraph = Paragraph::new(self.inputs[0].value())
                 .block(input_block)
                 .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
 
@@ -317,7 +317,7 @@ impl Component for RequestComponent {
 
             if is_active && self.writable {
                 f.set_cursor(
-                    chunks[1].x + self.inputs[self.selected_input].visual_cursor() as u16 + 1,
+                    chunks[1].x + self.inputs[0].visual_cursor() as u16 + 1,
                     chunks[1].y + 1,
                 );
             }
@@ -402,7 +402,14 @@ impl Component for RequestComponent {
                         self.save_header();
                     }
                 } else if self.show_body {
-                    self.save_body();
+                    if self.body_tabs[self.selected_body_tab] != RequestHeaders::None {
+                        if self.writable {
+                            self.save_body();
+                            self.writable = false;
+                        } else {
+                            self.writable = true;
+                        }
+                    }
                 } else if !self.writable && !self.adding_header && !self.is_editing {
                     // Open modal for editing header
                     self.is_modal_open = true;
