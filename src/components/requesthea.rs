@@ -22,6 +22,9 @@ pub enum EditingField {
     PreviousValue,
 }
 
+
+
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RequestHeaders {
     None,
@@ -108,7 +111,7 @@ impl RequestComponent {
             body_tabs: RequestHeaders::all_request(),
             editing_header: None,
             show_selection: false,
-            show_body: false,
+            show_body: true,
             body_content: vec![],
             adding_header: false,
             delete: false,
@@ -151,7 +154,7 @@ impl RequestComponent {
         }
     }
 
-    fn draw_modal<B: Backend>(&self, f: &mut Frame, area: Rect) {
+    fn draw_modal<B: Backend>(&self, f: &mut Frame) {
         let size = f.size();
         let modal_area = Rect::new(
             (size.width - 40) / 2,
@@ -223,6 +226,8 @@ impl Component for RequestComponent {
             .constraints([ratatui::layout::Constraint::Length(3), ratatui::layout::Constraint::Min(0)].as_ref())
             .split(area);
 
+        if !self.show_body{
+            
         // Draw the headers at the top
         let visible_count = (chunks[0].height as usize).min(self.headers.len());
         let scroll_offset = if self.selected_header + 1 > visible_count {
@@ -256,9 +261,11 @@ impl Component for RequestComponent {
 
         f.render_widget(headers_paragraph, chunks[0]);
 
+        }
+       
         // Draw modal if open
         if self.is_modal_open {
-            self.draw_modal::<B>(f, area);
+            self.draw_modal::<B>(f);
         } else if self.adding_header || self.is_editing {
             let current_field = match self.editing_header {
                 Some(EditingField::Key) => "Adding Key",
@@ -393,7 +400,11 @@ impl Component for RequestComponent {
     fn keybinds(&mut self, key: KeyCode) {
         match key {
             KeyCode::Enter => {
-                if self.is_modal_open {
+                if self.delete {
+                    self.delete_header();
+                    self.delete = false;
+                }
+              else  if self.is_modal_open {
                     if self.selected_input < 2 {
                         // Move to the next input field
                         self.selected_input += 1;
@@ -418,10 +429,7 @@ impl Component for RequestComponent {
                     self.inputs[0] = Input::from(header.key.clone());
                     self.inputs[1] = Input::from(header.value.clone());
                     self.inputs[2] = Input::from(header.previous_value.clone());
-                } else if self.delete {
-                    self.delete_header();
-                    self.delete = false;
-                }
+                } 
             }
             KeyCode::Esc => {
                 if self.is_modal_open {
@@ -448,16 +456,52 @@ impl Component for RequestComponent {
                 if self.is_modal_open && self.selected_input > 0 {
                     self.selected_input -= 1;
                 }
+
+                if self.show_selection {
+                    let i = match self.list_state.borrow().selected() {
+                        Some(i) => {
+                            if i == 2 {
+                                0
+                            } else {
+                                i + 1
+                            }
+                        }
+                        None => 0,
+                    };
+                    self.list_state.borrow_mut().select(Some(i));
+                } else {
+                    if self.writable || self.adding_header || self.is_editing {
+                        self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+                    }
+                }
             }
             KeyCode::Down => {
                 if self.is_modal_open && self.selected_input < 2 {
                     self.selected_input += 1;
                 }
+
+                if self.show_selection {
+                    let i = match self.list_state.borrow().selected() {
+                        Some(i) => {
+                            if i == 0 {
+                                2
+                            } else {
+                                   i - 1
+                            }
+                        }
+                        None => 0,
+                    };
+                    self.list_state.borrow_mut().select(Some(i));
+                } else {
+                    if self.writable || self.adding_header || self.is_editing {
+                        self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+                    }
+                }
             }
             KeyCode::Char('[') => {
                 if !self.writable {
                     self.show_body = false;
-                }
+                } 
                 self.inputs[self.selected_input] = Input::default();
             }
             KeyCode::Char(']') => {
@@ -520,44 +564,8 @@ impl Component for RequestComponent {
                     self.delete = true;
                 }
             }
-            KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('K') => {
-                if self.show_selection {
-                    let i = match self.list_state.borrow().selected() {
-                        Some(i) => {
-                            if i == 0 {
-                                2
-                            } else {
-                                i - 1
-                            }
-                        }
-                        None => 0,
-                    };
-                    self.list_state.borrow_mut().select(Some(i));
-                } else {
-                    if self.writable || self.adding_header || self.is_editing {
-                        self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
-                    }
-                }
-            }
-            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J') => {
-                if self.show_selection {
-                    let i = match self.list_state.borrow().selected() {
-                        Some(i) => {
-                            if i == 2 {
-                                0
-                            } else {
-                                i + 1
-                            }
-                        }
-                        None => 0,
-                    };
-                    self.list_state.borrow_mut().select(Some(i));
-                } else {
-                    if self.writable || self.adding_header || self.is_editing {
-                        self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
-                    }
-                }
-            }
+           
+          
             _ => {
                 if self.writable || self.adding_header || self.is_editing {
                     self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
