@@ -257,7 +257,7 @@ impl Component for RequestComponent {
             let items: Vec<ListItem> = self.headers.iter().enumerate().map(|(i, header)| {
                 let text = format!("{}: {} (prev: {})", header.key, header.value, header.previous_value);
                 let style = if i == self.selected_header {
-                    Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)
+                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
                 } else {
                     Style::default()
                 };
@@ -265,14 +265,15 @@ impl Component for RequestComponent {
             }).collect();
 
             let title_spans = vec![
-                Span::styled("Request ", Style::default().fg(if !self.show_body && is_active { Color::Blue } else { Color::White })),
-                Span::raw("- Body"),
+                Span::styled("Request ", Style::default().fg(if !self.show_body { Color::LightGreen } else { Color::White })),
+                Span::styled("- Body ", Color::White),
             ];
             let title_text = Line::from(title_spans);
     
 
             let list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title(Line::from(title_text)))
+            .style(Style::default().fg(if is_active { Color::Green } else { Color::White }))
             .highlight_style(Style::default().fg(if is_active {
                 Color::Green} else{
                     Color::White
@@ -324,7 +325,7 @@ impl Component for RequestComponent {
             let body_tab_spans: Vec<Span> = self.body_tabs.iter().enumerate().map(|(i, tab)| {
                 let tab_text = format!("{} ", tab.to_string());
                 if i == self.selected_body_tab {
-                    Span::styled(tab_text, Style::default().fg(if is_active || self.writable{
+                    Span::styled(tab_text, Style::default().fg(if is_active {
                         Color::Green } else{
                             Color::White
                     
@@ -338,13 +339,17 @@ impl Component for RequestComponent {
 
             let title_spans = vec![
                 
-                Span::raw("Request - ",),
-            Span::styled("Body ", Style::default().fg(if self.show_body && is_active { Color::Blue } else { Color::White })),
+                Span::styled("Request - ", Color::White),
+            Span::styled("Body ", Style::default().fg(if self.show_body  { Color::LightGreen } else { Color::White })),
         ];
         let title_line = Line::from(title_spans);
 
             let body_tabs_paragraph = Paragraph::new(Text::from(vec![body_tab_line]))
-                .block(Block::default().borders(Borders::ALL).title(title_line).style(Style::default()));
+                .block(Block::default().borders(Borders::ALL).title(title_line).style(if is_active {
+                    Color::Green
+                } else{
+                    Color::White
+                }));
 
             f.render_widget(body_tabs_paragraph, chunks[0]);
 
