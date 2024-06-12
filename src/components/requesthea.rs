@@ -3,12 +3,14 @@ use std::vec;
 
 use ratatui::backend::Backend;
 use ratatui::layout::Rect;
-use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Scrollbar};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::Frame;
 use ratatui::text::{Line, Span, Text};
 
 use crossterm::event::{KeyCode, KeyEvent, Event};
+
+
 
 use crate::ui::Component;
 
@@ -153,45 +155,62 @@ impl RequestComponent {
 
     fn draw_modal<B: Backend>(&self, f: &mut Frame) {
         let size = f.size();
-        let modal_area = Rect::new(
-            (size.width - 40) / 2,
-            (size.height - 10) / 2,
-            40,
-            10,
-        );
+let modal_area_width = 80; // Adjust width as needed
+let modal_area_height = 23; // Adjust height as needed to fit the increased height of the "Key" input area
+let modal_area = Rect::new(
+    (size.width - modal_area_width) / 2,
+    (size.height - modal_area_height) / 2,
+    modal_area_width,
+    modal_area_height,
+);
 
-        let modal_block = Block::default()
-            .title(if self.is_editing { "Edit Header" } else { "Add Header" })
-            .borders(Borders::ALL)
-            .style(Style::default().fg(Color::White).bg(Color::Black));
+let modal_block = Block::default()
+    .title(if self.is_editing { "Edit Header" } else { "Add Header" })
+    .borders(Borders::ALL)
+    .style(Style::default().fg(Color::White).bg(Color::Black));
 
-        f.render_widget(modal_block, modal_area);
+f.render_widget(modal_block, modal_area);
 
-        let input_areas = [
-            Rect::new(modal_area.x + 2, modal_area.y + 2, modal_area.width - 4, 3),
-            Rect::new(modal_area.x + 2, modal_area.y + 5, modal_area.width - 4, 3),
-            Rect::new(modal_area.x + 2, modal_area.y + 8, modal_area.width - 4, 3),
-        ];
+let input_areas = [
+    Rect::new(modal_area.x + 2, modal_area.y + 2, modal_area.width - 4, 10), // Increased height for Key input area
+    Rect::new(modal_area.x + 2, modal_area.y + 13, modal_area.width - 4, 3), // Value input area
+    Rect::new(modal_area.x + 2, modal_area.y + 17, modal_area.width - 4, 3), // Previous Value input area
+];
 
-        for (i, input_area) in input_areas.iter().enumerate() {
-            let paragraph = Paragraph::new(self.inputs[i].value())
-                .block(Block::default().borders(Borders::ALL).title(match i {
-                    0 => "Key",
-                    1 => "Value",
-                    2 => "Previous Value",
-                    _ => "",
-                }))
-                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+for (i, input_area) in input_areas.iter().enumerate() {
+    let paragraph = Paragraph::new(self.inputs[i].value())
+        .block(Block::default().borders(Borders::ALL).title(match i {
+            0 => "Key",
+            1 => "Value",
+            2 => "Previous Value",
+            _ => "",
+        })).wrap(ratatui::widgets::Wrap { trim: false }) 
+        .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
 
-            f.render_widget(paragraph, *input_area);
+    f.render_widget(paragraph, *input_area);
 
-            if i == self.selected_input {
-                f.set_cursor(
-                    input_area.x + self.inputs[i].visual_cursor() as u16 + 1,
-                    input_area.y + 1,
-                );
+    if i == self.selected_input {
+        let cursor_position = self.inputs[i].visual_cursor();
+        let wrapped_text = self.inputs[i].value().chars().collect::<Vec<_>>();
+        let mut cursor_x = input_area.x + 1;
+        let mut cursor_y = input_area.y + 1;
+        let mut line_length = 0;
+        for (index, ch) in wrapped_text.iter().enumerate() {
+            if index == cursor_position {
+                break;
+            }
+            if *ch == '\n' || line_length >= input_area.width as usize - 2 {
+                cursor_y += 1;
+                cursor_x = input_area.x + 1;
+                line_length = 0;
+            } else {
+                cursor_x += 1;
+                line_length += 1;
             }
         }
+        f.set_cursor(cursor_x, cursor_y);
+    }
+}
     }
 
     fn load_body(&mut self) {
@@ -245,12 +264,26 @@ impl Component for RequestComponent {
                 ListItem::new(text).style(style)
             }).collect();
 
+            let title_spans = vec![
+                Span::styled("Request ", Style::default().fg(if !self.show_body && is_active { Color::Blue } else { Color::White })),
+                Span::raw("- Body"),
+            ];
+            let title_text = Line::from(title_spans);
+    
+
             let list = List::new(items)
-                .block(Block::default().borders(Borders::ALL).title("Request Headers"))
-                .highlight_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
+            .block(Block::default().borders(Borders::ALL).title(Line::from(title_text)))
+            .highlight_style(Style::default().fg(if is_active {
+                Color::Green} else{
+                    Color::White
+                }).add_modifier(Modifier::BOLD));
                
 
+               
             f.render_stateful_widget(list, chunks[0], &mut self.list_state.borrow_mut());
+
+
+      
         }
 
         // Draw modal if open
@@ -270,6 +303,7 @@ impl Component for RequestComponent {
             f.render_widget(adding_paragraph, chunks[0]);
 
             if !self.show_body {
+                
                 let input_block = Block::default()
                     .borders(Borders::ALL)
                     .title("Body Input")
@@ -290,7 +324,11 @@ impl Component for RequestComponent {
             let body_tab_spans: Vec<Span> = self.body_tabs.iter().enumerate().map(|(i, tab)| {
                 let tab_text = format!("{} ", tab.to_string());
                 if i == self.selected_body_tab {
-                    Span::styled(tab_text, Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))
+                    Span::styled(tab_text, Style::default().fg(if is_active || self.writable{
+                        Color::Green } else{
+                            Color::White
+                    
+                    }).add_modifier(Modifier::BOLD))
                 } else {
                     Span::raw(tab_text)
                 }
@@ -298,19 +336,30 @@ impl Component for RequestComponent {
 
             let body_tab_line = Line::from(body_tab_spans);
 
+            let title_spans = vec![
+                
+                Span::raw("Request - ",),
+            Span::styled("Body ", Style::default().fg(if self.show_body && is_active { Color::Blue } else { Color::White })),
+        ];
+        let title_line = Line::from(title_spans);
+
             let body_tabs_paragraph = Paragraph::new(Text::from(vec![body_tab_line]))
-                .block(Block::default().borders(Borders::ALL).title("Body Tabs").style(Style::default().fg(if is_active { Color::Green } else { Color::White })));
+                .block(Block::default().borders(Borders::ALL).title(title_line).style(Style::default()));
 
             f.render_widget(body_tabs_paragraph, chunks[0]);
 
             let input_block = Block::default()
                 .borders(Borders::ALL)
                 .title("Body Input")
-                .style(Style::default().fg(if is_active { Color::Green } else { Color::White }));
+                ;
 
             let paragraph = Paragraph::new(self.inputs[0].value())
                 .block(input_block)
-                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+                .style(if is_active && self.writable{
+                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)} else{
+                        Style::default() 
+                    }
+                );
 
             f.render_widget(paragraph, chunks[1]);
 
@@ -398,6 +447,7 @@ impl Component for RequestComponent {
                         if self.writable {
                             self.save_body();
                             self.writable = false;
+                            self.selected_body_tab += 1;
                         } else {
                             self.writable = true;
                         }
@@ -425,18 +475,24 @@ impl Component for RequestComponent {
                     self.delete = false;
                 }
             }
-            KeyCode::Char('a') => {
-                if !self.is_modal_open {
+            KeyCode::Char('a') | KeyCode::Char('A')=> {
+                if !self.is_modal_open  && !self.writable && !self.adding_header && !self.is_editing && !self.show_body {
                     self.adding_header = true;
                     self.is_modal_open = true;
                     self.selected_input = 0;
                     self.inputs = [Input::default(), Input::default(), Input::default()];
+                } else  {
+                    if self.writable{
+                    self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+
+                    }
+                   
                 }
             }
             KeyCode::Up => {
-                if self.is_modal_open && self.selected_input > 0 {
+             /*   if self.is_modal_open && self.selected_input > 0 {
                     self.selected_input -= 1;
-                }
+                } */
 
                 if self.show_selection {
                     let i = match self.list_state.borrow().selected() {
@@ -460,9 +516,9 @@ impl Component for RequestComponent {
                 }
             }
             KeyCode::Down => {
-                if self.is_modal_open && self.selected_input < 2 {
+             /*    if self.is_modal_open && self.selected_input < 2 {
                     self.selected_input += 1;
-                }
+                } */
 
                 if self.show_selection {
                     let i = match self.list_state.borrow().selected() {
@@ -547,8 +603,10 @@ impl Component for RequestComponent {
                 }
             }
             KeyCode::Char('d') | KeyCode::Char('D') => {
-                if !self.writable && !self.adding_header && !self.is_editing {
+                if !self.writable && !self.adding_header && !self.is_editing  {
                     self.delete = true;
+                } else{
+                    self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
                 }
             }
             _ => {
