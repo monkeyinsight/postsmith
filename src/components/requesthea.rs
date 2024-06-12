@@ -155,62 +155,63 @@ impl RequestComponent {
 
     fn draw_modal<B: Backend>(&self, f: &mut Frame) {
         let size = f.size();
-let modal_area_width = 80; // Adjust width as needed
-let modal_area_height = 23; // Adjust height as needed to fit the increased height of the "Key" input area
-let modal_area = Rect::new(
-    (size.width - modal_area_width) / 2,
-    (size.height - modal_area_height) / 2,
-    modal_area_width,
-    modal_area_height,
-);
-
-let modal_block = Block::default()
-    .title(if self.is_editing { "Edit Header" } else { "Add Header" })
-    .borders(Borders::ALL)
-    .style(Style::default().fg(Color::White).bg(Color::Black));
-
-f.render_widget(modal_block, modal_area);
-
-let input_areas = [
-    Rect::new(modal_area.x + 2, modal_area.y + 2, modal_area.width - 4, 10), // Increased height for Key input area
-    Rect::new(modal_area.x + 2, modal_area.y + 13, modal_area.width - 4, 3), // Value input area
-    Rect::new(modal_area.x + 2, modal_area.y + 17, modal_area.width - 4, 3), // Previous Value input area
-];
-
-for (i, input_area) in input_areas.iter().enumerate() {
-    let paragraph = Paragraph::new(self.inputs[i].value())
-        .block(Block::default().borders(Borders::ALL).title(match i {
-            0 => "Key",
-            1 => "Value",
-            2 => "Previous Value",
-            _ => "",
-        })).wrap(ratatui::widgets::Wrap { trim: false }) 
-        .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
-
-    f.render_widget(paragraph, *input_area);
-
-    if i == self.selected_input {
-        let cursor_position = self.inputs[i].visual_cursor();
-        let wrapped_text = self.inputs[i].value().chars().collect::<Vec<_>>();
-        let mut cursor_x = input_area.x + 1;
-        let mut cursor_y = input_area.y + 1;
-        let mut line_length = 0;
-        for (index, ch) in wrapped_text.iter().enumerate() {
-            if index == cursor_position {
-                break;
-            }
-            if *ch == '\n' || line_length >= input_area.width as usize - 2 {
-                cursor_y += 1;
-                cursor_x = input_area.x + 1;
-                line_length = 0;
-            } else {
-                cursor_x += 1;
-                line_length += 1;
+        let modal_area_width = 80; // Adjust width as needed
+        let modal_area_height = 20; // Adjust height as needed to fit the increased height of the "Key" input area
+        let modal_area = Rect::new(
+            (size.width - modal_area_width) / 2,
+            (size.height - modal_area_height) / 2,
+            modal_area_width,
+            modal_area_height,
+        );
+        
+        let modal_block = Block::default()
+            .title(if self.is_editing { "Edit Header" } else { "Add Header" })
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::White).bg(Color::Black));
+        
+        f.render_widget(modal_block, modal_area);
+        
+        let input_areas = [
+            Rect::new(modal_area.x + 2, modal_area.y + 2, modal_area.width - 4, 3), // Key
+            Rect::new(modal_area.x + 2, modal_area.y + 6, modal_area.width - 4, 8), // Value
+            Rect::new(modal_area.x + 2, modal_area.y + 15, modal_area.width - 4, 3), // Previous Value
+        ];
+        
+        for (i, input_area) in input_areas.iter().enumerate() {
+            let paragraph = Paragraph::new(self.inputs[i].value())
+                .block(Block::default().borders(Borders::ALL).title(match i {
+                    0 => "Key",
+                    1 => "Value",
+                    2 => "Previous Value",
+                    _ => "",
+                }))
+                .wrap(ratatui::widgets::Wrap { trim: false })
+                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+        
+            f.render_widget(paragraph, *input_area);
+        
+            if i == self.selected_input {
+                let cursor_position = self.inputs[i].visual_cursor();
+                let wrapped_text = self.inputs[i].value().chars().collect::<Vec<_>>();
+                let mut cursor_x = input_area.x + 1;
+                let mut cursor_y = input_area.y + 1;
+                let mut line_length = 0;
+                for (index, ch) in wrapped_text.iter().enumerate() {
+                    if index == cursor_position {
+                        break;
+                    }
+                    if *ch == '\n' || line_length >= input_area.width as usize - 2 {
+                        cursor_y += 1;
+                        cursor_x = input_area.x + 1;
+                        line_length = 0;
+                    } else {
+                        cursor_x += 1;
+                        line_length += 1;
+                    }
+                }
+                f.set_cursor(cursor_x, cursor_y);
             }
         }
-        f.set_cursor(cursor_x, cursor_y);
-    }
-}
     }
 
     fn load_body(&mut self) {
@@ -613,6 +614,27 @@ impl Component for RequestComponent {
                 } else{
                     self.inputs[self.selected_input].handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
                 }
+            }
+            KeyCode::Tab =>{
+                if self.is_modal_open {
+                    if self.selected_input < 2 {
+                        // Move to the next input field
+                        self.selected_input += 1;
+                    } else {
+                        self.selected_input = 0;
+                    }
+                }
+            } 
+            KeyCode::BackTab => {
+                if self.is_modal_open {
+                    if self.selected_input > 0{
+                        self.selected_input -= 1;
+                    } else {
+                        self.selected_input = 2;
+                    }
+                }
+
+
             }
             _ => {
                 if self.writable || self.adding_header || self.is_editing {

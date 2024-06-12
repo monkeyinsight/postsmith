@@ -45,19 +45,24 @@ impl AppState {
         }
 
         if key == KeyCode::BackTab {
-            self.active_block = match self.active_block {
-                ActiveBlock::Method => ActiveBlock::Message,
-                ActiveBlock::Input => ActiveBlock::Method,
-                ActiveBlock::Message => ActiveBlock::Request,
-                ActiveBlock::Request => ActiveBlock::Input,
+            if !self.request_component.is_modal_open {
+                self.active_block = match self.active_block {
+                    ActiveBlock::Method => ActiveBlock::Message,
+                    ActiveBlock::Input => ActiveBlock::Method,
+                    ActiveBlock::Message => ActiveBlock::Request,
+                    ActiveBlock::Request => ActiveBlock::Input,
+                }
             }
+           
         } else if key == KeyCode::Tab {
+            if !self.request_component.is_modal_open {
             self.active_block = match self.active_block {
                 ActiveBlock::Method => ActiveBlock::Input,
                 ActiveBlock::Input => ActiveBlock::Request,
                 ActiveBlock::Request => ActiveBlock::Message,
                 ActiveBlock::Message => ActiveBlock::Method,
             };
+        }
         } else if key == KeyCode::Enter {
             if self.active_block == ActiveBlock::Input {
                 let url = self.input_component.input.clone();
