@@ -4,21 +4,18 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::Frame;
 
-use crossterm::event::{KeyCode, KeyEvent, Event};
-
-use tui_input::backend::crossterm::EventHandler;
-use tui_input::Input;
+use crossterm::event::KeyCode;
 
 use crate::ui::Component;
 
 pub struct InputComponent {
-    pub input: Input,
+    pub value: String,
 }
 
 impl InputComponent {
     pub fn new() -> Self {
         Self {
-            input: Input::default(),
+            value: String::new(),
         }
     }
 }
@@ -33,22 +30,16 @@ impl Component for InputComponent {
             } else {
                 Color::White
             }));
-
-        let paragraph = Paragraph::new(self.input.value())
+        
+        let value_clone = self.value.to_string();
+        let paragraph = Paragraph::new(value_clone)
             .block(block)
             .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
 
         f.render_widget(paragraph, area);
-
-        if is_active {
-            f.set_cursor(
-                area.x + self.input.visual_cursor() as u16 + 1,
-                area.y + 1,
-            )
-        }
     }
 
-    fn keybinds(&mut self, key: KeyCode) {
-        self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+    fn keybinds(&mut self, _key: KeyCode) {
+
     }
 }

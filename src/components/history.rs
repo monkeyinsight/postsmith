@@ -15,13 +15,13 @@ pub struct HistoryComponent {
 }
 
 impl HistoryComponent {
-    pub fn new() -> Self {
+    /*pub fn new() -> Self {
         Self {
             history: String::new(),
             scroll_x: 0,
             scroll_y: 0,
         }
-    }
+    }*/
     pub fn new_with_history(history: String) -> Self {
         Self {
             history: history,

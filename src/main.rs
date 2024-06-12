@@ -43,13 +43,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app_state: &mut AppState) -> io::Result<()> {
-    loop {
+    loop {    
         draw_ui(terminal, app_state)?;
-
-        if let Event::Key(key) = event::read()? {
-
-            
         
+        if let Event::Key(key) = event::read()? {
             if app_state.handle_key_event(key.code) {
                 break;
             }
