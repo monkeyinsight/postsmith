@@ -258,9 +258,11 @@ impl Component for RequestComponent {
             let items: Vec<ListItem> = self.headers.iter().enumerate().map(|(i, header)| {
                 let text = format!("{}: {} (prev: {})", header.key, header.value, header.previous_value);
                 let style = if i == self.selected_header {
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                    Style::default().fg(Color::White).bg( if is_active {Color::Blue} else {
+                        Color::default()
+                    }).add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default()
+                    Style::default().fg(Color::White)
                 };
                 ListItem::new(text).style(style)
             }).collect();
@@ -278,7 +280,7 @@ impl Component for RequestComponent {
             .highlight_style(Style::default().fg(if is_active {
                 Color::Green} else{
                     Color::White
-                }).add_modifier(Modifier::BOLD));
+                }).add_modifier(Modifier::BOLD)).highlight_symbol(" ");
                
 
                
@@ -324,17 +326,25 @@ impl Component for RequestComponent {
             );
         } else if self.show_body {
             let body_tab_spans: Vec<Span> = self.body_tabs.iter().enumerate().map(|(i, tab)| {
-                let tab_text = format!("{} ", tab.to_string());
+                let tab_text = tab.to_string();
+            
                 if i == self.selected_body_tab {
-                    Span::styled(tab_text, Style::default().fg(if is_active {
-                        Color::Green } else{
-                            Color::White
-                    
-                    }).add_modifier(Modifier::BOLD))
+                    vec![
+                        
+                        Span::styled(tab_text, Style::default().fg(Color::White).bg(if is_active { Color::Blue } else {
+                            Color::default()
+                        }).add_modifier(Modifier::BOLD)),
+                        Span::raw(" ")  
+                    ]
                 } else {
-                    Span::raw(tab_text)
+                    vec![
+                      
+                        Span::styled(tab_text, Style::default().fg(Color::White)),
+                        Span::raw(" ")  
+                    ]
                 }
-            }).collect();
+            }).flatten().collect();
+            
 
             let body_tab_line = Line::from(body_tab_spans);
 
