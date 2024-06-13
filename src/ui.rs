@@ -20,7 +20,6 @@ pub struct AppState {
     pub active_block: ActiveBlock,
     pub runtime: tokio::runtime::Runtime,
     pub session: Session,
-    pub show_modal: bool,
     pub modal_input_component: InputModalComponent,
 }
 
@@ -37,7 +36,6 @@ impl AppState {
     pub fn new() -> Self {
         let session = Session::new();
         let history = session.get_history();
-        let modal_input_component = InputModalComponent::new();
         Self {
             method_component: SelectorComponent::new(),
             input_component: InputComponent::new(),
@@ -46,8 +44,7 @@ impl AppState {
             active_block: ActiveBlock::Method,
             runtime: tokio::runtime::Runtime::new().unwrap(),
             session,
-            show_modal: false,
-            modal_input_component,
+            modal_input_component: InputModalComponent::new(),
         }
     }
 
@@ -79,7 +76,7 @@ impl AppState {
         } else if key == KeyCode::Enter {
             if self.active_block == ActiveBlock::Modal {
                 self.modal_input_component.pass_url(&mut self.input_component);
-                self.show_modal = false;
+                self.modal_input_component.show_modal = false;
                 self.active_block = ActiveBlock::Input;
                 let response = self
                     .runtime
@@ -114,6 +111,7 @@ impl AppState {
                 self.active_block = ActiveBlock::Method;
             }
             if self.active_block == ActiveBlock::Modal {
+                self.modal_input_component.show_modal = false;
                 self.active_block = ActiveBlock::Input;
             }
         }  else if key == KeyCode::Char('q') {
@@ -122,7 +120,7 @@ impl AppState {
             }
         } else if key == KeyCode::Char('e') {
             if self.active_block == ActiveBlock::Input {
-                self.show_modal = true;
+                self.modal_input_component.show_modal = true;
                 self.active_block = ActiveBlock::Modal;
             }
         }
@@ -137,16 +135,10 @@ pub fn draw_ui<B: Backend>(
 ) -> std::io::Result<()> {
     terminal.draw(|f| {
         let size = f.size();
+
         if app_state.active_block == ActiveBlock::History {
             let history_chunk = Rect::new(0, 0, size.width, size.height);
-            app_state
-                .history_component
-                .draw::<B>(f, history_chunk, true);
-        } else if app_state.active_block == ActiveBlock::Modal  {
-            let modal_chunk = Rect::new(0, 0, size.width, size.height);
-            app_state
-                .modal_input_component
-                .draw::<B>(f, modal_chunk, true);
+            app_state.history_component.draw::<B>(f, history_chunk, true);
         } else {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
@@ -173,7 +165,11 @@ pub fn draw_ui<B: Backend>(
                 chunks[1],
                 app_state.active_block == ActiveBlock::Message,
             );
-        };
+
+            if app_state.modal_input_component.show_modal {
+                app_state.modal_input_component.draw_modal::<B>(f, app_state.modal_input_component.show_modal);
+            }
+        }
     })?;
     Ok(())
 }

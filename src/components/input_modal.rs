@@ -1,26 +1,28 @@
 use ratatui::backend::Backend;
 use ratatui::layout::Rect;
-use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::style::{Color, Modifier, Style};
+use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 
-use crossterm::event::{KeyCode, KeyEvent, Event};
+use crossterm::event::{Event, KeyCode, KeyEvent};
+use crossterm::terminal::size;
 
 use tui_input::backend::crossterm::EventHandler;
 use tui_input::Input;
 
-use crate::ui::Component;
 use crate::components::InputComponent;
-
+use crate::ui::Component;
 
 pub struct InputModalComponent {
     pub input: Input,
+    pub show_modal: bool,
 }
 
 impl InputModalComponent {
     pub fn new() -> Self {
         Self {
             input: Input::default(),
+            show_modal: false,
         }
     }
     pub fn capture_input(&mut self) -> String {
@@ -29,36 +31,82 @@ impl InputModalComponent {
     pub fn pass_url(&mut self, input_component: &mut InputComponent) {
         let url = self.capture_input();
         input_component.value = url;
-        
     }
-}
+    pub fn draw_modal<B: Backend>(&self, f: &mut Frame, is_active: bool) {
+        let terminal_size = size().unwrap(); // Default size if terminal size retrieval fails
+        let modal_width = terminal_size.0 - 10;
+        let modal_height = terminal_size.1 - 10;
+        let modal_area = Rect::new(
+            (terminal_size.0 - modal_width) / 2,
+            (terminal_size.1 - modal_height) / 2,
+            modal_width,
+            6,
+        );
 
-impl Component for InputModalComponent {
-    fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool) {
-        let block = Block::new()
-            .borders(Borders::ALL)
+        let modal_block = Block::default()
             .title("URL Input")
+            .borders(Borders::ALL)
             .style(Style::default().fg(if is_active {
                 Color::Green
             } else {
                 Color::White
-            }));
+            }).bg(Color::Black));
+
+        f.render_widget(modal_block, modal_area);
+
+        let input_area = Rect::new(
+            modal_area.x + 2,
+            modal_area.y + 2,
+            modal_area.width - 4,
+            3,
+        );
 
         let paragraph = Paragraph::new(self.input.value())
-            .block(block)
-            .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+            .block(Block::default().borders(Borders::ALL).title("URL"))
+            .wrap(ratatui::widgets::Wrap { trim: false })
+            .style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .bg(Color::Black)
+                    .add_modifier(Modifier::BOLD),
+            );
 
-        f.render_widget(paragraph, area);
+        f.render_widget(paragraph, input_area);
 
-        if is_active {
-            f.set_cursor(
-                area.x + self.input.visual_cursor() as u16 + 1,
-                area.y + 1,
-            )
+        let cursor_position = self.input.visual_cursor();
+        let wrapped_text = self.input.value().chars().collect::<Vec<_>>();
+        let mut cursor_x = input_area.x + 1;
+        let mut cursor_y = input_area.y + 1;
+        let mut line_length = 0;
+        for (index, ch) in wrapped_text.iter().enumerate() {
+            if index == cursor_position {
+                break;
+            }
+            if *ch == '\n' || line_length >= input_area.width as usize - 2 {
+                cursor_y += 1;
+                cursor_x = input_area.x + 1;
+                line_length = 0;
+            } else {
+                cursor_x += 1;
+                line_length += 1;
+            }
+
+            f.set_cursor(cursor_x, cursor_y);
+        }
+    }
+}
+
+impl Component for InputModalComponent {
+    fn draw<B: Backend>(&self, f: &mut Frame, _area: Rect, is_active: bool) {
+        if self.show_modal {
+            self.draw_modal::<B>(f, is_active);
         }
     }
 
     fn keybinds(&mut self, key: KeyCode) {
-        self.input.handle_event(&Event::Key(KeyEvent::new(key, crossterm::event::KeyModifiers::NONE)));
+        self.input.handle_event(&Event::Key(KeyEvent::new(
+            key,
+            crossterm::event::KeyModifiers::NONE,
+        )));
     }
 }
