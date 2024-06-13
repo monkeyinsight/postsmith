@@ -37,7 +37,7 @@ impl Component for OutputComponent {
         
         let paragraph = Paragraph::new(self.message.clone())
             .block(block)
-            .style(Style::default().fg(Color::Green))
+            .style(Style::default().fg(Color::White))
             .scroll((self.scroll_y, 0));
         
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
