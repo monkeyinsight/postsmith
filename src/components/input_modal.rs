@@ -43,56 +43,46 @@ impl InputModalComponent {
             modal_height,
         );
 
-        let modal_block = Block::default()
-            .title("URL Input")
-            .borders(Borders::ALL)
-            .style(Style::default().fg(if is_active {
-                Color::Green
-            } else {
-                Color::White
-            }).bg(Color::Black));
-
-        f.render_widget(modal_block, modal_area);
-
         let input_area = Rect::new(
-            modal_area.x + 2,
-            modal_area.y + 2,
-            modal_area.width - 4,
-            modal_area.height - 4,
+            modal_area.x + 1,
+            modal_area.y + 1,
+            modal_area.width - 2,
+            modal_area.height - 2,
         );
 
         let paragraph = Paragraph::new(self.input.value())
-            .block(Block::default().borders(Borders::ALL).title("URL"))
-            .wrap(ratatui::widgets::Wrap { trim: false })
-            .style(
-                Style::default()
-                    .fg(Color::Yellow)
-                    .bg(Color::Black)
-                    .add_modifier(Modifier::BOLD),
-            );
+        .block(Block::default().borders(Borders::ALL).title("URL Input"))
+        .wrap(ratatui::widgets::Wrap { trim: false })
+        .style(
+            Style::default()
+                .fg(if is_active { Color::Green } else { Color::White })
+                .bg(Color::Black)
+                .add_modifier(Modifier::BOLD),
+        );
 
-        f.render_widget(paragraph, input_area);
+    f.render_widget(paragraph, modal_area);
 
-        let cursor_position = self.input.visual_cursor();
-        let wrapped_text = self.input.value().chars().collect::<Vec<_>>();
-        let mut cursor_x = input_area.x + 1;
-        let mut cursor_y = input_area.y + 1;
-        let mut line_length = 0;
-        for (index, ch) in wrapped_text.iter().enumerate() {
-            if index == cursor_position {
-                break;
-            }
-            if *ch == '\n' || line_length >= input_area.width as usize - 2 {
-                cursor_y += 1;
-                cursor_x = input_area.x + 1;
-                line_length = 0;
-            } else {
-                cursor_x += 1;
-                line_length += 1;
-            }
+    let cursor_position = self.input.visual_cursor();
+    let wrapped_text = self.input.value().chars().collect::<Vec<_>>();
+    let mut cursor_x = input_area.x; 
+    let mut cursor_y = input_area.y;
+    let mut line_length = 0;
 
-            f.set_cursor(cursor_x, cursor_y);
+    for (index, ch) in wrapped_text.iter().enumerate() {
+        if index == cursor_position {
+            break;
         }
+        if *ch == '\n' || line_length >= modal_area.width as usize - 2 {
+            cursor_y += 1;
+            cursor_x = input_area.x;
+            line_length = 0;
+        } else {
+            cursor_x += 1;
+            line_length += 1;
+        }
+    }
+
+    f.set_cursor(cursor_x, cursor_y);
     }
 }
 
