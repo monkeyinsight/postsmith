@@ -1,12 +1,12 @@
-use crate::components::{ HistoryComponent, InputComponent, OutputComponent, SelectorComponent};
+use crate::components::{HistoryComponent, InputComponent, OutputComponent, SelectorComponent, RequestComponent};
 use crate::session::Session;
 use crossterm::event::KeyCode;
 
-use ratatui::{backend::Backend, layout::{Constraint, Direction, Layout, Rect}, Terminal, Frame};
-use crate::components::{InputComponent, OutputComponent, SelectorComponent, RequestComponent};
-
-
-
+use ratatui::{
+    backend::Backend,
+    layout::{Constraint, Direction, Layout, Rect},
+    Terminal, Frame,
+};
 
 pub trait Component {
     fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool);
@@ -29,11 +29,8 @@ pub enum ActiveBlock {
     Method,
     Input,
     Message,
-
     Request,
-
     History,
-
 }
 
 impl AppState {
@@ -48,7 +45,6 @@ impl AppState {
             active_block: ActiveBlock::Method,
             request_component: RequestComponent::new(),
             runtime: tokio::runtime::Runtime::new().unwrap(),
-            //session: Session::new(),
             session,
         }
     }
@@ -58,9 +54,8 @@ impl AppState {
             ActiveBlock::Method => self.method_component.keybinds(key),
             ActiveBlock::Input => self.input_component.keybinds(key),
             ActiveBlock::Message => self.message_component.keybinds(key),
-
-            ActiveBlock::Request  => self.request_component.keybinds(key),
-           ActiveBlock::History => self.history_component.keybinds(key),
+            ActiveBlock::Request => self.request_component.keybinds(key),
+            ActiveBlock::History => self.history_component.keybinds(key),
         }
 
         if key == KeyCode::BackTab {
@@ -70,30 +65,19 @@ impl AppState {
                     ActiveBlock::Input => ActiveBlock::Method,
                     ActiveBlock::Message => ActiveBlock::Request,
                     ActiveBlock::Request => ActiveBlock::Input,
+                    ActiveBlock::History => ActiveBlock::History,
                 }
-
-           
-        }
-
-        if key == KeyCode::BackTab {
-            self.active_block = match self.active_block {
-                ActiveBlock::Method => ActiveBlock::Message,
-                ActiveBlock::Input => ActiveBlock::Method,
-                ActiveBlock::Message => ActiveBlock::Input,
-                ActiveBlock::History => ActiveBlock::History,
-
             }
-           
         } else if key == KeyCode::Tab {
             if !self.request_component.is_modal_open {
-            self.active_block = match self.active_block {
-                ActiveBlock::Method => ActiveBlock::Input,
-                ActiveBlock::Input => ActiveBlock::Request,
-                ActiveBlock::Request => ActiveBlock::Message,
-                ActiveBlock::Message => ActiveBlock::Method,
-                ActiveBlock::History => ActiveBlock::History,
-            };
-        }
+                self.active_block = match self.active_block {
+                    ActiveBlock::Method => ActiveBlock::Input,
+                    ActiveBlock::Input => ActiveBlock::Request,
+                    ActiveBlock::Request => ActiveBlock::Message,
+                    ActiveBlock::Message => ActiveBlock::Method,
+                    ActiveBlock::History => ActiveBlock::History,
+                }
+            }
         } else if key == KeyCode::Enter {
             if self.active_block == ActiveBlock::Input {
                 let url = self.input_component.input.clone();
@@ -107,8 +91,6 @@ impl AppState {
                     Err(err) => self.message_component.message = format!("Error: {}", err),
                 }
             }
-
-        
         } else if key == KeyCode::Char('H') {
             if self.active_block == ActiveBlock::Input {
                 self.active_block = ActiveBlock::Input;
@@ -120,9 +102,8 @@ impl AppState {
             if self.active_block == ActiveBlock::History {
                 self.active_block = ActiveBlock::Method;
             }
-        }  else if key == KeyCode::Char('q') && !self.request_component.adding_header && !self.request_component.writable{
+        } else if key == KeyCode::Char('q') && !self.request_component.adding_header && !self.request_component.writable {
             if self.active_block != ActiveBlock::Input {
-
                 return true;
             }
         }
@@ -138,41 +119,32 @@ pub fn draw_ui<B: Backend>(
     terminal.draw(|f| {
         let size = f.size();
 
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints(
-                [
-                    Constraint::Length(3),
-                    Constraint::Length(6),
-                    Constraint::Min(0),
-                ]
-                .as_ref(),
-            )
-            .split(size);
-
         if app_state.active_block == ActiveBlock::History {
             let history_chunk = Rect::new(0, 0, size.width, size.height);
-            app_state
-                .history_component
-                .draw::<B>(f, history_chunk, true);
+            app_state.history_component.draw::<B>(f, history_chunk, true);
         } else {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+                .constraints(
+                    [
+                        Constraint::Length(3),
+                        Constraint::Length(6),
+                        Constraint::Min(0),
+                    ]
+                    .as_ref(),
+                )
                 .split(size);
-
 
             let top_chunks = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(10), Constraint::Percentage(90)].as_ref())
                 .split(chunks[0]);
 
-
-        app_state.method_component.draw::<B>(f, top_chunks[0], app_state.active_block == ActiveBlock::Method);
-        app_state.input_component.draw::<B>(f, top_chunks[1], app_state.active_block == ActiveBlock::Input);
-        app_state.request_component.draw::<B>(f, chunks[1], app_state.active_block == ActiveBlock::Request);
-        app_state.message_component.draw::<B>(f, chunks[2], app_state.active_block == ActiveBlock::Message);
-
+            app_state.method_component.draw::<B>(f, top_chunks[0], app_state.active_block == ActiveBlock::Method);
+            app_state.input_component.draw::<B>(f, top_chunks[1], app_state.active_block == ActiveBlock::Input);
+            app_state.request_component.draw::<B>(f, chunks[1], app_state.active_block == ActiveBlock::Request);
+            app_state.message_component.draw::<B>(f, chunks[2], app_state.active_block == ActiveBlock::Message);
+        }
     })?;
     Ok(())
 }
