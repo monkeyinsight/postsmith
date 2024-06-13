@@ -33,14 +33,14 @@ impl InputModalComponent {
         input_component.value = url;
     }
     pub fn draw_modal<B: Backend>(&self, f: &mut Frame, is_active: bool) {
-        let terminal_size = size().unwrap(); // Default size if terminal size retrieval fails
+        let terminal_size = size().unwrap();
         let modal_width = terminal_size.0 - 10;
         let modal_height = terminal_size.1 - 10;
         let modal_area = Rect::new(
             (terminal_size.0 - modal_width) / 2,
             (terminal_size.1 - modal_height) / 2,
             modal_width,
-            6,
+            modal_height,
         );
 
         let modal_block = Block::default()
@@ -58,7 +58,7 @@ impl InputModalComponent {
             modal_area.x + 2,
             modal_area.y + 2,
             modal_area.width - 4,
-            3,
+            modal_area.height - 4,
         );
 
         let paragraph = Paragraph::new(self.input.value())
