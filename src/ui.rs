@@ -1,10 +1,13 @@
+
 use crate::components::{ HistoryComponent, InputComponent, OutputComponent, SelectorComponent, InputModalComponent};
+
 use crate::session::Session;
 use crossterm::event::KeyCode;
+
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
-    Frame, Terminal,
+    Terminal, Frame,
 };
 
 pub trait Component {
@@ -18,6 +21,7 @@ pub struct AppState {
     pub message_component: OutputComponent,
     pub history_component: HistoryComponent,
     pub active_block: ActiveBlock,
+    pub request_component: RequestComponent,
     pub runtime: tokio::runtime::Runtime,
     pub session: Session,
     pub modal_input_component: InputModalComponent,
@@ -28,6 +32,7 @@ pub enum ActiveBlock {
     Method,
     Input,
     Message,
+    Request,
     History,
     Modal,
 }
@@ -42,6 +47,7 @@ impl AppState {
             message_component: OutputComponent::new(),
             history_component: HistoryComponent::new_with_history(history),
             active_block: ActiveBlock::Method,
+            request_component: RequestComponent::new(),
             runtime: tokio::runtime::Runtime::new().unwrap(),
             session,
             modal_input_component: InputModalComponent::new(),
@@ -53,26 +59,35 @@ impl AppState {
             ActiveBlock::Method => self.method_component.keybinds(key),
             ActiveBlock::Input => self.input_component.keybinds(key),
             ActiveBlock::Message => self.message_component.keybinds(key),
+            ActiveBlock::Request => self.request_component.keybinds(key),
             ActiveBlock::History => self.history_component.keybinds(key),
             ActiveBlock::Modal => self.modal_input_component.keybinds(key),
         }
 
         if key == KeyCode::BackTab {
-            self.active_block = match self.active_block {
-                ActiveBlock::Method => ActiveBlock::Message,
-                ActiveBlock::Input => ActiveBlock::Method,
-                ActiveBlock::Message => ActiveBlock::Input,
-                ActiveBlock::History => ActiveBlock::History,
-                ActiveBlock::Modal => ActiveBlock::Modal,
+
+            if !self.request_component.is_modal_open {
+                self.active_block = match self.active_block {
+                    ActiveBlock::Method => ActiveBlock::Message,
+                    ActiveBlock::Input => ActiveBlock::Method,
+                    ActiveBlock::Message => ActiveBlock::Request,
+                    ActiveBlock::Request => ActiveBlock::Input,
+                    ActiveBlock::History => ActiveBlock::History,
+                   ActiveBlock::Modal => ActiveBlock::Modal,
+                }
             }
         } else if key == KeyCode::Tab {
-            self.active_block = match self.active_block {
-                ActiveBlock::Method => ActiveBlock::Input,
-                ActiveBlock::Input => ActiveBlock::Message,
-                ActiveBlock::Message => ActiveBlock::Method,
-                ActiveBlock::History => ActiveBlock::History,
-                ActiveBlock::Modal => ActiveBlock::Modal,
-            };
+            if !self.request_component.is_modal_open {
+                self.active_block = match self.active_block {
+                    ActiveBlock::Method => ActiveBlock::Input,
+                    ActiveBlock::Input => ActiveBlock::Request,
+                    ActiveBlock::Request => ActiveBlock::Message,
+                    ActiveBlock::Message => ActiveBlock::Method,
+                    ActiveBlock::History => ActiveBlock::History,
+                   ActiveBlock::Modal => ActiveBlock::Modal,
+                }
+            }
+
         } else if key == KeyCode::Enter {
             if self.active_block == ActiveBlock::Modal {
                 self.modal_input_component.pass_url(&mut self.input_component);
@@ -103,12 +118,17 @@ impl AppState {
             if self.active_block == ActiveBlock::History {
                 self.active_block = ActiveBlock::Method;
             }
+
+        } else if key == KeyCode::Char('q') && !self.request_component.adding_header && !self.request_component.writable {
+            if self.active_block != ActiveBlock::Input {
+
             if self.active_block == ActiveBlock::Modal {
                 self.modal_input_component.show_modal = false;
                 self.active_block = ActiveBlock::Input;
             }
         }  else if key == KeyCode::Char('q') {
             if self.active_block != ActiveBlock::Modal{
+
                 return true;
             }
         } else if key == KeyCode::Char('e') {
@@ -147,7 +167,14 @@ pub fn draw_ui<B: Backend>(
         } else {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
+                .constraints(
+                    [
+                        Constraint::Length(3),
+                        Constraint::Length(6),
+                        Constraint::Min(0),
+                    ]
+                    .as_ref(),
+                )
                 .split(size);
 
             let top_chunks = Layout::default()
@@ -155,25 +182,16 @@ pub fn draw_ui<B: Backend>(
                 .constraints([Constraint::Percentage(10), Constraint::Percentage(90)].as_ref())
                 .split(chunks[0]);
 
-            app_state.method_component.draw::<B>(
-                f,
-                top_chunks[0],
-                app_state.active_block == ActiveBlock::Method,
-            );
-            app_state.input_component.draw::<B>(
-                f,
-                top_chunks[1],
-                app_state.active_block == ActiveBlock::Input,
-            );
-            app_state.message_component.draw::<B>(
-                f,
-                chunks[1],
-                app_state.active_block == ActiveBlock::Message,
-            );
+            app_state.method_component.draw::<B>(f, top_chunks[0], app_state.active_block == ActiveBlock::Method);
+            app_state.input_component.draw::<B>(f, top_chunks[1], app_state.active_block == ActiveBlock::Input);
+            app_state.request_component.draw::<B>(f, chunks[1], app_state.active_block == ActiveBlock::Request);
+            app_state.message_component.draw::<B>(f, chunks[2], app_state.active_block == ActiveBlock::Message);
+
 
             if app_state.modal_input_component.show_modal {
                 app_state.modal_input_component.draw_modal::<B>(f, app_state.modal_input_component.show_modal);
             }
+
         }
     })?;
     Ok(())
