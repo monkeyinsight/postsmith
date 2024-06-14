@@ -34,8 +34,8 @@ impl InputModalComponent {
     }
     pub fn draw_modal<B: Backend>(&self, f: &mut Frame, is_active: bool) {
         let terminal_size = size().unwrap();
-        let modal_width = terminal_size.0 - 10;
-        let modal_height = terminal_size.1 - 10;
+        let modal_width = 80;
+        let modal_height = 5;
         let modal_area = Rect::new(
             (terminal_size.0 - modal_width) / 2,
             (terminal_size.1 - modal_height) / 2,
@@ -56,7 +56,6 @@ impl InputModalComponent {
         .style(
             Style::default()
                 .fg(if is_active { Color::Green } else { Color::White })
-                .bg(Color::Black)
                 .add_modifier(Modifier::BOLD),
         );
 

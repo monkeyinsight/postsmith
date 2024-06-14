@@ -78,7 +78,7 @@ impl AppState {
                 self.modal_input_component.pass_url(&mut self.input_component);
                 self.modal_input_component.show_modal = false;
                 self.active_block = ActiveBlock::Input;
-                let response = self
+                /*let response = self
                     .runtime
                     .block_on(crate::request::send_get_request(&self.input_component.value));
 
@@ -86,17 +86,10 @@ impl AppState {
                 match response {
                     Ok(body) => self.message_component.message = body,
                     Err(err) => self.message_component.message = format!("Error: {}", err),
-                }
+                }*/
             } else if self.active_block == ActiveBlock::Input {
-                let response = self
-                    .runtime
-                    .block_on(crate::request::send_get_request(&self.input_component.value));
-
-                self.session.push_history(self.method_component.method.to_string(), self.input_component.value.clone());
-                match response {
-                    Ok(body) => self.message_component.message = body,
-                    Err(err) => self.message_component.message = format!("Error: {}", err),
-                }
+                self.modal_input_component.show_modal = true;
+                self.active_block = ActiveBlock::Modal;
             }
         } else if key == KeyCode::Char('H') {
             if self.active_block == ActiveBlock::Modal{
@@ -122,6 +115,18 @@ impl AppState {
             if self.active_block == ActiveBlock::Input {
                 self.modal_input_component.show_modal = true;
                 self.active_block = ActiveBlock::Modal;
+            }
+        } else if key == KeyCode::Char('g') {
+            if self.active_block == ActiveBlock::Input {
+                let response = self
+                    .runtime
+                    .block_on(crate::request::send_get_request(&self.input_component.value));
+
+                self.session.push_history(self.method_component.method.to_string(), self.input_component.value.clone());
+                match response {
+                    Ok(body) => self.message_component.message = body,
+                    Err(err) => self.message_component.message = format!("Error: {}", err),
+                }
             }
         }
 
