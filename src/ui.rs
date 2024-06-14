@@ -1,4 +1,4 @@
-use crate::components::{ HistoryComponent, InputComponent, OutputComponent, SelectorComponent};
+use crate::components::{ HistoryComponent, InputComponent, OutputComponent, SelectorComponent, InputModalComponent};
 use crate::session::Session;
 use crossterm::event::KeyCode;
 use ratatui::{
@@ -20,6 +20,7 @@ pub struct AppState {
     pub active_block: ActiveBlock,
     pub runtime: tokio::runtime::Runtime,
     pub session: Session,
+    pub modal_input_component: InputModalComponent,
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -28,6 +29,7 @@ pub enum ActiveBlock {
     Input,
     Message,
     History,
+    Modal,
 }
 
 impl AppState {
@@ -41,8 +43,8 @@ impl AppState {
             history_component: HistoryComponent::new_with_history(history),
             active_block: ActiveBlock::Method,
             runtime: tokio::runtime::Runtime::new().unwrap(),
-            //session: Session::new(),
             session,
+            modal_input_component: InputModalComponent::new(),
         }
     }
 
@@ -52,6 +54,7 @@ impl AppState {
             ActiveBlock::Input => self.input_component.keybinds(key),
             ActiveBlock::Message => self.message_component.keybinds(key),
             ActiveBlock::History => self.history_component.keybinds(key),
+            ActiveBlock::Modal => self.modal_input_component.keybinds(key),
         }
 
         if key == KeyCode::BackTab {
@@ -60,6 +63,7 @@ impl AppState {
                 ActiveBlock::Input => ActiveBlock::Method,
                 ActiveBlock::Message => ActiveBlock::Input,
                 ActiveBlock::History => ActiveBlock::History,
+                ActiveBlock::Modal => ActiveBlock::Modal,
             }
         } else if key == KeyCode::Tab {
             self.active_block = match self.active_block {
@@ -67,24 +71,31 @@ impl AppState {
                 ActiveBlock::Input => ActiveBlock::Message,
                 ActiveBlock::Message => ActiveBlock::Method,
                 ActiveBlock::History => ActiveBlock::History,
+                ActiveBlock::Modal => ActiveBlock::Modal,
             };
         } else if key == KeyCode::Enter {
-            if self.active_block == ActiveBlock::Input {
-                let url = self.input_component.input.clone();
-                let response = self
+            if self.active_block == ActiveBlock::Modal {
+                self.modal_input_component.pass_url(&mut self.input_component);
+                self.modal_input_component.show_modal = false;
+                self.active_block = ActiveBlock::Input;
+                /*let response = self
                     .runtime
-                    .block_on(crate::request::send_get_request(&url.value()));
+                    .block_on(crate::request::send_get_request(&self.input_component.value));
 
-                self.session.push_history(self.method_component.method.to_string(), url.to_string());
+                self.session.push_history(self.method_component.method.to_string(), self.input_component.value.clone());
                 match response {
                     Ok(body) => self.message_component.message = body,
                     Err(err) => self.message_component.message = format!("Error: {}", err),
-                }
+                }*/
+            } else if self.active_block == ActiveBlock::Input {
+                self.modal_input_component.show_modal = true;
+                self.active_block = ActiveBlock::Modal;
             }
         } else if key == KeyCode::Char('H') {
-            if self.active_block == ActiveBlock::Input {
-                self.active_block = ActiveBlock::Input;
-            } else if self.active_block != ActiveBlock::History {
+            if self.active_block == ActiveBlock::Modal{
+
+            }
+            else if self.active_block != ActiveBlock::History {
                 self.history_component.history = self.session.get_history();
                 self.active_block = ActiveBlock::History;
             }
@@ -92,9 +103,30 @@ impl AppState {
             if self.active_block == ActiveBlock::History {
                 self.active_block = ActiveBlock::Method;
             }
+            if self.active_block == ActiveBlock::Modal {
+                self.modal_input_component.show_modal = false;
+                self.active_block = ActiveBlock::Input;
+            }
         }  else if key == KeyCode::Char('q') {
-            if self.active_block != ActiveBlock::Input {
+            if self.active_block != ActiveBlock::Modal{
                 return true;
+            }
+        } else if key == KeyCode::Char('e') {
+            if self.active_block == ActiveBlock::Input {
+                self.modal_input_component.show_modal = true;
+                self.active_block = ActiveBlock::Modal;
+            }
+        } else if key == KeyCode::Char('g') {
+            if self.active_block == ActiveBlock::Input {
+                let response = self
+                    .runtime
+                    .block_on(crate::request::send_get_request(&self.input_component.value));
+
+                self.session.push_history(self.method_component.method.to_string(), self.input_component.value.clone());
+                match response {
+                    Ok(body) => self.message_component.message = body,
+                    Err(err) => self.message_component.message = format!("Error: {}", err),
+                }
             }
         }
 
@@ -108,11 +140,10 @@ pub fn draw_ui<B: Backend>(
 ) -> std::io::Result<()> {
     terminal.draw(|f| {
         let size = f.size();
+
         if app_state.active_block == ActiveBlock::History {
             let history_chunk = Rect::new(0, 0, size.width, size.height);
-            app_state
-                .history_component
-                .draw::<B>(f, history_chunk, true);
+            app_state.history_component.draw::<B>(f, history_chunk, true);
         } else {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
@@ -139,7 +170,11 @@ pub fn draw_ui<B: Backend>(
                 chunks[1],
                 app_state.active_block == ActiveBlock::Message,
             );
-        };
+
+            if app_state.modal_input_component.show_modal {
+                app_state.modal_input_component.draw_modal::<B>(f, app_state.modal_input_component.show_modal);
+            }
+        }
     })?;
     Ok(())
 }
