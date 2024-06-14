@@ -1,6 +1,4 @@
-
-use crate::components::{ HistoryComponent, InputComponent, OutputComponent, SelectorComponent, InputModalComponent};
-
+use crate::components::{HistoryComponent, InputComponent, OutputComponent, SelectorComponent, InputModalComponent, RequestComponent};
 use crate::session::Session;
 use crossterm::event::KeyCode;
 
@@ -65,7 +63,6 @@ impl AppState {
         }
 
         if key == KeyCode::BackTab {
-
             if !self.request_component.is_modal_open {
                 self.active_block = match self.active_block {
                     ActiveBlock::Method => ActiveBlock::Message,
@@ -73,7 +70,7 @@ impl AppState {
                     ActiveBlock::Message => ActiveBlock::Request,
                     ActiveBlock::Request => ActiveBlock::Input,
                     ActiveBlock::History => ActiveBlock::History,
-                   ActiveBlock::Modal => ActiveBlock::Modal,
+                    ActiveBlock::Modal => ActiveBlock::Modal,
                 }
             }
         } else if key == KeyCode::Tab {
@@ -84,10 +81,9 @@ impl AppState {
                     ActiveBlock::Request => ActiveBlock::Message,
                     ActiveBlock::Message => ActiveBlock::Method,
                     ActiveBlock::History => ActiveBlock::History,
-                   ActiveBlock::Modal => ActiveBlock::Modal,
+                    ActiveBlock::Modal => ActiveBlock::Modal,
                 }
             }
-
         } else if key == KeyCode::Enter {
             if self.active_block == ActiveBlock::Modal {
                 self.modal_input_component.pass_url(&mut self.input_component);
@@ -107,10 +103,9 @@ impl AppState {
                 self.active_block = ActiveBlock::Modal;
             }
         } else if key == KeyCode::Char('H') {
-            if self.active_block == ActiveBlock::Modal{
-
-            }
-            else if self.active_block != ActiveBlock::History {
+            if self.active_block == ActiveBlock::Modal {
+                // Do nothing specific for Modal block
+            } else if self.active_block != ActiveBlock::History {
                 self.history_component.history = self.session.get_history();
                 self.active_block = ActiveBlock::History;
             }
@@ -118,17 +113,11 @@ impl AppState {
             if self.active_block == ActiveBlock::History {
                 self.active_block = ActiveBlock::Method;
             }
-
         } else if key == KeyCode::Char('q') && !self.request_component.adding_header && !self.request_component.writable {
-            if self.active_block != ActiveBlock::Input {
-
             if self.active_block == ActiveBlock::Modal {
                 self.modal_input_component.show_modal = false;
                 self.active_block = ActiveBlock::Input;
-            }
-        }  else if key == KeyCode::Char('q') {
-            if self.active_block != ActiveBlock::Modal{
-
+            } else {
                 return true;
             }
         } else if key == KeyCode::Char('e') {
@@ -187,11 +176,9 @@ pub fn draw_ui<B: Backend>(
             app_state.request_component.draw::<B>(f, chunks[1], app_state.active_block == ActiveBlock::Request);
             app_state.message_component.draw::<B>(f, chunks[2], app_state.active_block == ActiveBlock::Message);
 
-
             if app_state.modal_input_component.show_modal {
                 app_state.modal_input_component.draw_modal::<B>(f, app_state.modal_input_component.show_modal);
             }
-
         }
     })?;
     Ok(())
