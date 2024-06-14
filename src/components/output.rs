@@ -1,12 +1,14 @@
 use ratatui::backend::Backend;
 use ratatui::layout::Rect;
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
 use ratatui::style::{Color, Style};
 use ratatui::Frame;
 use crossterm::event::KeyCode;
+use std::fs::File;
+use std::io::Write;
+use std::process::Command;
 
 use crate::ui::Component;
-use ratatui::{prelude::*, widgets::*};
 
 pub struct OutputComponent {
     pub message: String,
@@ -21,6 +23,21 @@ impl OutputComponent {
             scroll_x: 0,
             scroll_y: 0,
         }
+    }
+
+    fn save_message_to_file(&self) -> std::io::Result<String> {
+        let file_path = "/tmp/output.json";
+        let mut file = File::create(file_path)?;
+        file.write_all(self.message.as_bytes())?;
+        Ok(file_path.to_string())
+    }
+
+    fn open_in_editor(&self) -> std::io::Result<()> {
+        let file_path = self.save_message_to_file()?;
+        Command::new(std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string()))
+            .arg(&file_path)
+            .status()?;
+        Ok(())
     }
 }
 
@@ -50,7 +67,7 @@ impl Component for OutputComponent {
         f.render_widget(paragraph, area);
         f.render_stateful_widget(
             scrollbar,
-            area.inner(&Margin {
+            area.inner(&ratatui::layout::Margin {
                 vertical: 1,
                 horizontal: 0,
             }),
@@ -78,6 +95,11 @@ impl Component for OutputComponent {
             }
             KeyCode::Right | KeyCode::Char('l') | KeyCode::Char('L') => {
                 self.scroll_x += 1;
+            }
+            KeyCode::Char('e') => {
+                if let Err(e) = self.open_in_editor() {
+                    eprintln!("Failed to open editor: {}", e);
+                }
             }
             _ => {}
         }
