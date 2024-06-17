@@ -9,6 +9,7 @@ use ratatui::Frame;
 use ratatui::text::{Line, Span, Text};
 
 use crossterm::event::{KeyCode, KeyEvent, Event};
+use serde::Serialize;
 
 use crate::ui::Component;
 
@@ -22,7 +23,7 @@ pub enum EditingField {
     PreviousValue,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize)]
 pub enum RequestHeaders {
     None,
     FormData,
@@ -55,7 +56,7 @@ impl RequestHeaders {
         }
     }
 }
-
+#[derive( Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct RequestHeader {
     pub key: String,
     pub value: String,

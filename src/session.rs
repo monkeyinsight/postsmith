@@ -1,6 +1,7 @@
 use dirs::config_dir;
 use serde::{Deserialize, Serialize};
 use std::{fs, io::Write};
+use crate::components::{requesthea::RequestHeaders, requesthea::RequestHeader};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct History {
@@ -9,12 +10,19 @@ struct History {
     //  Danik is working on it
     //header: String,
     url: String,
+    body_content: String,
+    headers: String,
+
 }
+
+
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
     history: Vec<History>,
 }
+
+
 
 impl Session {
     pub fn new() -> Self {
@@ -25,12 +33,20 @@ impl Session {
         session
     }
 
-    pub fn push_history(&mut self, request: &str, /*header: String,*/ url: String) {
+    pub fn push_history(&mut self, request: &str, /*header: String,*/ url: String, body_content: Vec<(RequestHeaders, String)>,  headers:Vec<RequestHeader>) {
+        let body_content_str = serde_json::to_string(&body_content).unwrap_or_default();
+        let headers_str = serde_json::to_string(&headers).unwrap_or_default();
+       
+       
+       
         let history = History {
             date: chrono::offset::Local::now().to_string(),
             action: request.to_string(),
             //header: header,
             url: url,
+            headers: headers_str,
+            body_content: body_content_str,
+            
         };
 
         self.history.push(history);
@@ -68,7 +84,7 @@ impl Session {
         self.history
             .iter()
             .rev()
-            .map(|h| format!("{} - {} - {}\n", h.date, h.action, h.url))
+            .map(|h| format!("{} - {} - {} - {}  - {}\n", h.date, h.action, h.url, h.body_content, h.headers))
             .collect()
     }
 }

@@ -2,6 +2,7 @@ use crate::components::{HistoryComponent, InputComponent, OutputComponent, Selec
 use crate::session::Session;
 use crossterm::event::KeyCode;
 
+
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -105,7 +106,7 @@ impl AppState {
                     .runtime
                     .block_on(crate::request::send_get_request(&self.input_component.value));
 
-                self.session.push_history(self.method_component.method.to_string(), self.input_component.value.clone());
+                self.session.push_history(self.method_component.method.to_string(), self.input_component.value.clone(), self.request_component.body_content.clone(), self.request_component.headers.clone());
                 match response {
                     Ok(body) => self.message_component.message = body,
                     Err(err) => self.message_component.message = format!("Error: {}", err),
