@@ -1,5 +1,7 @@
 use crate::components::{HistoryComponent, InputComponent, OutputComponent, SelectorComponent,  RequestComponent};
-use crate::session::Session;
+
+use super::components::history::Session;
+
 use crossterm::event::KeyCode;
 
 
