@@ -4,6 +4,7 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::style::{Color,  Style};
 use ratatui::Frame;
 use crossterm::event::KeyCode;
+use ratatui::text::{ Span, Text};
 
 use crate::ui::Component;
 use ratatui::{prelude::*, widgets::*};
@@ -42,10 +43,23 @@ impl Component for HistoryComponent {
                 Color::White
             }));
 
-        let paragraph = Paragraph::new(self.history.clone())
+            let lines: Vec<Line> = self.history
+            .lines()
+            .enumerate()
+            .map(|(i, line)| {
+                let line_style = if i as u16 == self.scroll_y {
+                    Style::default().bg(Color::Blue)
+                } else {
+                    Style::default()
+                };
+                Line::from(Span::styled(line, line_style))
+            })
+            .collect();
+
+        let paragraph = Paragraph::new(Text::from(lines))
             .block(block)
             .style(Style::default().fg(Color::Green))
-            .scroll((self.scroll_y, 0));
+            .scroll((self.scroll_y, self.scroll_x));
 
             let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("↑"))
@@ -72,11 +86,15 @@ impl Component for HistoryComponent {
             KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('K') => {
                 if self.scroll_y > 0 {
                     self.scroll_y -= 1;
+                } else {
+                    self.scroll_y = max_scroll_y;
                 }
             }
             KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J')=> {
                 if self.scroll_y < max_scroll_y {
                     self.scroll_y += 1;
+                } else {
+                    self.scroll_y = 0;
                 }
             }
             KeyCode::Left | KeyCode::Char('h') | KeyCode::Char('H') => {

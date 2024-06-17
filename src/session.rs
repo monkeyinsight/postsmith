@@ -67,6 +67,7 @@ impl Session {
     pub fn get_history(&self) -> String {
         self.history
             .iter()
+            .rev()
             .map(|h| format!("{} - {} - {}\n", h.date, h.action, h.url))
             .collect()
     }

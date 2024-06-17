@@ -99,11 +99,6 @@ impl AppState {
           
                 return true;
             
-        } else if key == KeyCode::Char('e') {
-           /*  if self.active_block == ActiveBlock::Input {
-                self.modal_input_component.show_modal = true;
-                self.active_block = ActiveBlock::Modal;
-            } */
         } else if key == KeyCode::Char('g') {
             if self.active_block == ActiveBlock::Input {
                 let response = self
