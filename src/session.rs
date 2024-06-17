@@ -34,9 +34,16 @@ impl Session {
     }
 
     pub fn push_history(&mut self, request: &str, /*header: String,*/ url: String, body_content: Vec<(RequestHeaders, String)>,  headers:Vec<RequestHeader>) {
-        let body_content_str = serde_json::to_string(&body_content).unwrap_or_default();
-        let headers_str = serde_json::to_string(&headers).unwrap_or_default();
-       
+        
+        let body_content_str = body_content.iter()
+            .map(|(key, value)| format!("{:?}: {}",  key, value))
+            .collect::<Vec<_>>()
+            .join(", ");
+        
+        let headers_str = headers.iter()
+            .map(|header| format!("{}: {}", header.key, header.value))
+            .collect::<Vec<_>>()
+            .join(", ");
        
        
         let history = History {
