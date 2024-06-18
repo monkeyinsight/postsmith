@@ -41,6 +41,19 @@ impl HttpMethod {
             HttpMethod::OPTIONS => "OPTIONS",
         }
     }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "GET" => Some(HttpMethod::GET),
+            "POST" => Some(HttpMethod::POST),
+            "PUT" => Some(HttpMethod::PUT),
+            "DELETE" => Some(HttpMethod::DELETE),
+            "PATCH" => Some(HttpMethod::PATCH),
+            "HEAD" => Some(HttpMethod::HEAD),
+            "OPTIONS" => Some(HttpMethod::OPTIONS),
+            _ => None,
+        }
+    }
 }
 
 pub struct SelectorComponent {

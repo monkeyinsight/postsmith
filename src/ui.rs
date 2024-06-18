@@ -110,6 +110,10 @@ impl AppState {
                    // println!("{:?}", headers);
                     self.request_component.headers = headers;
                 }
+
+                if let Some(method) =  session.get_method(self.history_component.scroll_y as usize){
+                    self.method_component.method = method;
+                }
             }
             
         } else if key == KeyCode::Char('H') {

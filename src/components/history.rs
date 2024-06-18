@@ -13,6 +13,7 @@ use crate::ui::Component;
 use ratatui::prelude::*;
 
 use super::requesthea::{RequestHeader, RequestHeaders};
+use super::selector::HttpMethod;
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -158,6 +159,16 @@ impl Session {
                     .collect()
             )
         }
+    }
+
+    pub fn get_method(&self, scroll_y: usize) -> Option<HttpMethod> {
+        let entries = self.get_history_entries();
+        if scroll_y >= entries.len() {
+            None
+        } else {
+            HttpMethod::from_str(&entries[scroll_y].action)
+        }
+
     }
 }
 
