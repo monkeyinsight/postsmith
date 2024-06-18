@@ -11,6 +11,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     Terminal, Frame,
 };
+use tui_input::Input;
 
 pub trait Component {
     fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool);
@@ -91,11 +92,23 @@ impl AppState {
         } else if key == KeyCode::Enter {
             if self.active_block == ActiveBlock::History {
                 let session = Session::new();
-                if let Some(url) = session.get_current_url(self.history_component.scroll_y as usize) {
+                if let  Some(url) = session.get_current_url(self.history_component.scroll_y as usize) {
                     //   println!("Selected URL: {}", url);
-                     self.input_component.value = url;
+                     self.input_component.value = url.clone();
+                     self.input_component.input = Input::from(url);
                         self.active_block = ActiveBlock::Method;
 
+                }
+
+                if let Some(body_content) = session.get_body_content(self.history_component.scroll_y as usize) {
+                    
+                //  println!("{#?}", body_content); 
+                    self.request_component.body_content = body_content;
+                }
+    
+                if let Some(headers) = session.get_headers(self.history_component.scroll_y as usize) {
+                   // println!("{:?}", headers);
+                    self.request_component.headers = headers;
                 }
             }
             

@@ -55,6 +55,18 @@ impl RequestHeaders {
             RequestHeaders::Graphql => "GraphQL",
         }
     }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "none" => Some(RequestHeaders::None),
+            "FormData" => Some(RequestHeaders::FormData),
+            "Xwwwformundeclored" => Some(RequestHeaders::Xwwwformundeclored),
+            "Raw" => Some(RequestHeaders::Raw),
+            "Binary" => Some(RequestHeaders::Binary),
+            "Graphql" => Some(RequestHeaders::Graphql),
+            _ => None,
+        }
+    }
 }
 #[derive( Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct RequestHeader {

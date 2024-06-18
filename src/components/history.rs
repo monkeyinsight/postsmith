@@ -13,7 +13,7 @@ use crate::ui::Component;
 use ratatui::prelude::*;
 
 use super::requesthea::{RequestHeader, RequestHeaders};
-use crate::AppState;
+
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct History {
@@ -106,6 +106,57 @@ impl Session {
             None
         } else {
             Some(entries[scroll_y].url.clone())
+        }
+    }
+
+    pub fn get_body_content(&self, scroll_y: usize) -> Option<Vec<(RequestHeaders, String)>> {
+        let entries = self.get_history_entries();
+        if scroll_y >= entries.len() {
+            None
+        } else {
+            let body_content_str = &entries[scroll_y].body_content;
+            Some(
+                body_content_str.split(", ")
+                    .filter_map(|s| {
+                        let parts: Vec<&str> = s.split(": ").collect();
+                        if parts.len() == 2 {
+                            if let Some(header) = RequestHeaders::from_str(parts[0]) {
+                                Some((header, parts[1].to_string()))
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            )
+        }
+    }
+
+    // Function to get headers as a vector
+    pub fn get_headers(&self, scroll_y: usize) -> Option<Vec<RequestHeader>> {
+        let entries = self.get_history_entries();
+        if scroll_y >= entries.len() {
+            None
+        } else {
+            let headers_str = &entries[scroll_y].headers;
+            Some(
+                headers_str.split(", ")
+                    .filter_map(|s| {
+                        let parts: Vec<&str> = s.split(": ").collect();
+                        if parts.len() == 2 {
+                            Some(RequestHeader {
+                                key: parts[0].to_string(),
+                                value: parts[1].to_string(),
+                                previous_value: String::new(), // Assuming you don't store previous_value in History
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            )
         }
     }
 }
