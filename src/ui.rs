@@ -5,6 +5,7 @@ use super::components::history::Session;
 use crossterm::event::KeyCode;
 
 
+
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -88,6 +89,15 @@ impl AppState {
                 }
             }
         } else if key == KeyCode::Enter {
+            if self.active_block == ActiveBlock::History {
+                let session = Session::new();
+                if let Some(url) = session.get_current_url(self.history_component.scroll_y as usize) {
+                    //   println!("Selected URL: {}", url);
+                     self.input_component.value = url;
+                        self.active_block = ActiveBlock::Method;
+
+                }
+            }
             
         } else if key == KeyCode::Char('H') {
           if self.active_block != ActiveBlock::History {

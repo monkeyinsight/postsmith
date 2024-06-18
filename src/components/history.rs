@@ -2,40 +2,32 @@ use dirs::config_dir;
 use ratatui::backend::Backend;
 use ratatui::layout::Rect;
 use ratatui::widgets::{Block, Borders, Paragraph};
-use ratatui::style::{Color,  Style};
+use ratatui::style::{Color, Style};
 use ratatui::Frame;
 use crossterm::event::KeyCode;
-use ratatui::text::{ Span, Text};
+use ratatui::text::{Span, Text};
 use serde::{Deserialize, Serialize};
 use std::{fs, io::Write};
 
 use crate::ui::Component;
-use ratatui::{prelude::*, widgets::*};
+use ratatui::prelude::*;
 
 use super::requesthea::{RequestHeader, RequestHeaders};
-
-
+use crate::AppState;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct History {
     date: String,
     action: String,
-    //  Danik is working on it
-    //header: String,
     url: String,
     body_content: String,
     headers: String,
-
 }
-
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
     history: Vec<History>,
 }
-
-
 
 impl Session {
     pub fn new() -> Self {
@@ -46,27 +38,23 @@ impl Session {
         session
     }
 
-    pub fn push_history(&mut self, request: &str, /*header: String,*/ url: String, body_content: Vec<(RequestHeaders, String)>,  headers:Vec<RequestHeader>) {
-        
+    pub fn push_history(&mut self, request: &str, url: String, body_content: Vec<(RequestHeaders, String)>, headers: Vec<RequestHeader>) {
         let body_content_str = body_content.iter()
-            .map(|(key, value)| format!("{:?}: {}",  key, value))
+            .map(|(key, value)| format!("{:?}: {}", key, value))
             .collect::<Vec<_>>()
             .join(", ");
-        
+
         let headers_str = headers.iter()
             .map(|header| format!("{}: {}", header.key, header.value))
             .collect::<Vec<_>>()
             .join(", ");
-       
-       
+
         let history = History {
             date: chrono::offset::Local::now().to_string(),
             action: request.to_string(),
-            //header: header,
-            url: url,
+            url,
             headers: headers_str,
             body_content: body_content_str,
-            
         };
 
         self.history.push(history);
@@ -107,8 +95,20 @@ impl Session {
             .map(|h| format!("{} - {} - {} - {}  - {}\n", h.date, h.action, h.url, h.body_content, h.headers))
             .collect()
     }
-}
 
+    pub fn get_history_entries(&self) -> Vec<&History> {
+        self.history.iter().rev().collect()
+    }
+
+    pub fn get_current_url(&self, scroll_y: usize) -> Option<String> {
+        let entries = self.get_history_entries();
+        if scroll_y >= entries.len() {
+            None
+        } else {
+            Some(entries[scroll_y].url.clone())
+        }
+    }
+}
 
 pub struct HistoryComponent {
     pub history: String,
@@ -117,16 +117,9 @@ pub struct HistoryComponent {
 }
 
 impl HistoryComponent {
-    /*pub fn new() -> Self {
-        Self {
-            history: String::new(),
-            scroll_x: 0,
-            scroll_y: 0,
-        }
-    }*/
     pub fn new_with_history(history: String) -> Self {
         Self {
-            history: history,
+            history,
             scroll_x: 0,
             scroll_y: 0,
         }
@@ -144,7 +137,7 @@ impl Component for HistoryComponent {
                 Color::White
             }));
 
-            let lines: Vec<Line> = self.history
+        let lines: Vec<Line> = self.history
             .lines()
             .enumerate()
             .map(|(i, line)| {
@@ -162,23 +155,7 @@ impl Component for HistoryComponent {
             .style(Style::default().fg(Color::Green))
             .scroll((self.scroll_y, self.scroll_x));
 
-            let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(Some("↑"))
-            .end_symbol(Some("↓"));
-
-        let mut scrollbar_state = ScrollbarState::new(self.history.lines().count())
-            .position(self.scroll_y as usize);
-
         f.render_widget(paragraph, area);
-
-        f.render_stateful_widget(
-            scrollbar,
-            area.inner(&Margin {
-                vertical: 1,
-                horizontal: 0,
-            }),
-            &mut scrollbar_state,
-        );
     }
 
     fn keybinds(&mut self, key: KeyCode) {
@@ -191,7 +168,7 @@ impl Component for HistoryComponent {
                     self.scroll_y = max_scroll_y;
                 }
             }
-            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J')=> {
+            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('J') => {
                 if self.scroll_y < max_scroll_y {
                     self.scroll_y += 1;
                 } else {
@@ -205,6 +182,13 @@ impl Component for HistoryComponent {
             }
             KeyCode::Right | KeyCode::Char('l') | KeyCode::Char('L') => {
                 self.scroll_x += 1;
+            }
+            KeyCode::Enter => {
+             /*    let session = Session::new();
+                if let Some(url) = session.get_current_url(self.scroll_y as usize) {
+                 //   println!("Selected URL: {}", url);
+                  app_state.input_component.value = url;
+                } */
             }
             _ => {}
         }
