@@ -34,7 +34,7 @@ impl OutputComponent {
 
     fn open_in_editor(&self) -> std::io::Result<()> {
         let file_path = self.save_message_to_file()?;
-        Command::new(std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string()))
+        Command::new(std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string()))
             .arg(&file_path)
             .status()?;
         Ok(())

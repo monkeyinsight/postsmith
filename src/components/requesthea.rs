@@ -9,6 +9,7 @@ use ratatui::Frame;
 use ratatui::text::{Line, Span, Text};
 
 use crossterm::event::{KeyCode, KeyEvent, Event};
+use serde::Serialize;
 
 use crate::ui::Component;
 
@@ -22,7 +23,7 @@ pub enum EditingField {
     PreviousValue,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize)]
 pub enum RequestHeaders {
     None,
     FormData,
@@ -54,8 +55,20 @@ impl RequestHeaders {
             RequestHeaders::Graphql => "GraphQL",
         }
     }
-}
 
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "none" => Some(RequestHeaders::None),
+            "FormData" => Some(RequestHeaders::FormData),
+            "Xwwwformundeclored" => Some(RequestHeaders::Xwwwformundeclored),
+            "Raw" => Some(RequestHeaders::Raw),
+            "Binary" => Some(RequestHeaders::Binary),
+            "Graphql" => Some(RequestHeaders::Graphql),
+            _ => None,
+        }
+    }
+}
+#[derive( Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct RequestHeader {
     pub key: String,
     pub value: String,

@@ -125,6 +125,7 @@ impl Component for InputComponent {
                 }
             }
 
+          
             KeyCode::Enter => {
 
                 if self.show_modal{

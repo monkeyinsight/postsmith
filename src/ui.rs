@@ -1,12 +1,17 @@
 use crate::components::{HistoryComponent, InputComponent, OutputComponent, SelectorComponent,  RequestComponent};
-use crate::session::Session;
+
+use super::components::history::Session;
+
 use crossterm::event::KeyCode;
+
+
 
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     Terminal, Frame,
 };
+use tui_input::Input;
 
 pub trait Component {
     fn draw<B: Backend>(&self, f: &mut Frame, area: Rect, is_active: bool);
@@ -85,6 +90,31 @@ impl AppState {
                 }
             }
         } else if key == KeyCode::Enter {
+            if self.active_block == ActiveBlock::History {
+                let session = Session::new();
+                if let  Some(url) = session.get_current_url(self.history_component.scroll_y as usize) {
+                    //   println!("Selected URL: {}", url);
+                     self.input_component.value = url.clone();
+                     self.input_component.input = Input::from(url);
+                        self.active_block = ActiveBlock::Method;
+
+                }
+
+                if let Some(body_content) = session.get_body_content(self.history_component.scroll_y as usize) {
+                    
+                //  println!("{#?}", body_content); 
+                    self.request_component.body_content = body_content;
+                }
+    
+                if let Some(headers) = session.get_headers(self.history_component.scroll_y as usize) {
+                   // println!("{:?}", headers);
+                    self.request_component.headers = headers;
+                }
+
+                if let Some(method) =  session.get_method(self.history_component.scroll_y as usize){
+                    self.method_component.method = method;
+                }
+            }
             
         } else if key == KeyCode::Char('H') {
           if self.active_block != ActiveBlock::History {
@@ -99,18 +129,13 @@ impl AppState {
           
                 return true;
             
-        } else if key == KeyCode::Char('e') {
-           /*  if self.active_block == ActiveBlock::Input {
-                self.modal_input_component.show_modal = true;
-                self.active_block = ActiveBlock::Modal;
-            } */
         } else if key == KeyCode::Char('g') {
             if self.active_block == ActiveBlock::Input {
                 let response = self
                     .runtime
                     .block_on(crate::request::send_get_request(&self.input_component.value));
 
-                self.session.push_history(self.method_component.method.to_string(), self.input_component.value.clone());
+                self.session.push_history(self.method_component.method.to_string(), self.input_component.value.clone(), self.request_component.body_content.clone(), self.request_component.headers.clone());
                 match response {
                     Ok(body) => self.message_component.message = body,
                     Err(err) => self.message_component.message = format!("Error: {}", err),
